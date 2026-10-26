@@ -1,0 +1,935 @@
+diff --git a/robots/libero/env_client.py b/robots/libero/env_client.py
+index ec2bc77..a3defc1 100644
+--- a/robots/libero/env_client.py
++++ b/robots/libero/env_client.py
+@@ -48,17 +48,52 @@ class LiberoEnvClient(BaseEnvClient):
+         self.return_all_frames = return_all_frames
+         self.terminated = False
+         self.truncated = False
++        # ``--oracle-dynamics free``: success no longer sets ``terminated`` (which
++        # stops every primitive and refuses later env steps); it is only logged in
++        # the ``success_*`` fields below, for the experimenter.
++        self.decouple_termination = False
++        self._reset_success_log()
+         super().__init__(client, expected_meta=expected_meta)
+ 
++    def _reset_success_log(self) -> None:
++        self.success_now = False  # the predicate at the latest env step
++        self.success_ever = False  # ... at any env step so far
++        self.first_success_step = None  # env step (1-based) at which it first held
++        self.n_steps = 0  # env steps since reset
++
++    @property
++    def reported_terminated(self) -> bool:
++        """The success flag a visible oracle shows the planner: the sticky
++        ``terminated`` when coupled, the predicate at the latest step when free."""
++        return self.success_now if self.decouple_termination else self.terminated
++
+     def check_done(self, term, trunc) -> None:
+-        self.terminated |= bool(np.asarray(term).any())
++        term = np.asarray(term).reshape(-1).astype(bool)
++        if term.size:
++            if term.any() and self.first_success_step is None:
++                self.first_success_step = (
++                    self.n_steps - term.size + int(np.argmax(term)) + 1
++                )
++            self.success_ever |= bool(term.any())
++            self.success_now = bool(term[-1])
++        if not self.decouple_termination:
++            self.terminated |= bool(term.any())
+         self.truncated |= bool(np.asarray(trunc).any())
+ 
++    def check_success(self) -> bool:
++        """Evaluate the LIBERO success predicate on the current state now."""
++        return bool(
++            self._client.call(
++                "env.check_success", timeout_s=self._TIMEOUT_S["default"]
++            )
++        )
++
+     def reset(self) -> tuple[dict, Any]:
+         ret = super().reset()
+         self.last_obs = ret[0]
+         self.terminated = False
+         self.truncated = False
++        self._reset_success_log()
+         return ret
+ 
+     def step(self, action) -> tuple[dict, Any, np.ndarray, Any, Any]:
+@@ -66,6 +101,7 @@ class LiberoEnvClient(BaseEnvClient):
+             "env.step called after the episode signaled term/trunc"
+         )
+         ret = super().step(action)
++        self.n_steps += 1
+         _, _, term, trunc, _ = ret
+         self.check_done(term, trunc)
+         return ret
+@@ -91,6 +127,7 @@ class LiberoEnvClient(BaseEnvClient):
+             return_all_frames=return_all_frames,
+         )
+         _, _, term, trunc, _ = ret
++        self.n_steps += int(np.asarray(term).reshape(-1).size) or len(actions)
+         self.check_done(term, trunc)
+         return ret
+ 
+diff --git a/robots/libero/env_server.py b/robots/libero/env_server.py
+index 6553db8..04e554d 100644
+--- a/robots/libero/env_server.py
++++ b/robots/libero/env_server.py
+@@ -178,9 +178,11 @@ class LiberoEnvFacade(BaseEnvFacade):
+                 "env.render_camera": self.render_camera,
+                 "env.get_camera_meta": self.get_camera_meta,
+                 "env.get_task_language": self.get_task_language,
++                "env.check_success": self.check_success,
+             }
+         )
+         self._readonly_methods.add("env.get_task_language")
++        self._readonly_methods.add("env.check_success")
+ 
+     # ---- shape helpers ----
+ 
+@@ -298,6 +300,10 @@ class LiberoEnvFacade(BaseEnvFacade):
+     def get_task_language(self) -> str | None:
+         return self._env.task_descriptions[self._env_idx]
+ 
++    def check_success(self) -> bool:
++        """The LIBERO success predicate on the current state (no env step)."""
++        return bool(np.asarray(self._env.env.check_success()).reshape(-1)[self._env_idx])
++
+ 
+ # ---------------------------------------------------------------------------
+ # Main
+diff --git a/robots/libero/prompt_bundle.py b/robots/libero/prompt_bundle.py
+index 736565e..1ead073 100644
+--- a/robots/libero/prompt_bundle.py
++++ b/robots/libero/prompt_bundle.py
+@@ -17,13 +17,16 @@
+ from __future__ import annotations
+ 
+ from collections.abc import Mapping
++from dataclasses import dataclass
+ 
+ from robots.libero.prompts import explore as explore_parts
+ from robots.libero.prompts import knowledge_eval as knowledge_parts
+ from robots.libero.prompts import local_eval as local_eval_parts
++from robots.libero.prompts import oracle_free
+ from robots.libero.prompts import system as system_parts
+ from robots.libero.prompts import user as user_parts
+ from rpent.context.prompt_utils import Numbered, PromptNode
++from rpent.robots.prompt_bundle import PromptBundle
+ 
+ 
+ def system_prompt(variables: Mapping[str, object] | None = None) -> PromptNode:
+@@ -67,3 +70,20 @@ def user_prompt(variables: Mapping[str, object] | None = None) -> PromptNode:
+ 
+ 
+ __all__ = ["system_prompt", "user_prompt"]
++
++
++@dataclass(frozen=True)
++class LiberoPromptBundle(PromptBundle):
++    """``--oracle-info hidden|prompt``: the rendered prompts lose every reference to
++    the success flag (``robots.libero.prompts.oracle_free``)."""
++
++    def render(
++        self,
++        variant: str,
++        *,
++        variables: Mapping[str, object] | None = None,
++    ) -> str:
++        text = super().render(variant, variables=variables)
++        if oracle_free.rewrites_text(str((variables or {}).get("oracle_info", "visible"))):
++            text = oracle_free.rewrite_prompt(text, variant)
++        return text
+diff --git a/robots/libero/prompts/oracle_free.py b/robots/libero/prompts/oracle_free.py
+new file mode 100644
+index 0000000..7b1ac76
+--- /dev/null
++++ b/robots/libero/prompts/oracle_free.py
+@@ -0,0 +1,382 @@
++# Copyright 2026 The RPent Authors.
++#
++# Licensed under the Apache License, Version 2.0 (the "License");
++# you may not use this file except in compliance with the License.
++# You may obtain a copy of the License at
++#
++#     https://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS,
++# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++# See the License for the specific language governing permissions and
++# limitations under the License.
++
++"""What the planner learns about LIBERO's success predicate (the "oracle").
++
++Two independent switches (``--oracle-info``, ``--oracle-dynamics``):
++
++``oracle_info``
++    ``visible``  unchanged: tool results, state records and ``states.json`` carry
++                 ``terminated`` / ``truncated``; the prompt, the tool descriptions
++                 and the guides tell the planner to aim for ``terminated == true``.
++    ``hidden``   ``fields`` + ``prompt`` together.
++    ``fields``   the oracle FIELDS are removed from everything the planner can
++                 read (tool results, ``view_env_state``, ``states.json``), the
++                 ``pi0_doubled`` success flag (which is the predicate itself) is
++                 dropped and ``pi0_pick`` reports only its own lift/grip test;
++                 the text is left as it is.
++    ``prompt``   only the TEXT is rewritten (system prompt, tool descriptions,
++                 guides) so that it no longer refers to a success flag; the fields
++                 stay.
++
++``oracle_dynamics``
++    ``coupled``  unchanged: every primitive stops as soon as the predicate holds
++                 and any later env step is refused (``env_client`` asserts).
++    ``free``     the environment keeps running after success; success is only
++                 logged for the experimenter (``LiberoEnvClient.success_*``). With
++                 a visible oracle the reported ``terminated`` is then the predicate
++                 at the latest env step, which can turn false again.
++
++Every rewrite names the exact fragment it replaces and the result is checked for
++any remaining oracle term, so a change of the upstream prompt fails loudly instead
++of leaking silently.
++"""
++
++from __future__ import annotations
++
++import copy
++import json
++import re
++from typing import Any
++
++ORACLE_INFO = ("visible", "hidden", "fields", "prompt")
++ORACLE_DYNAMICS = ("coupled", "free")
++
++#: Any word the planner must not read once the oracle is hidden ("determinate" is fine).
++FORBIDDEN = re.compile(
++    r"(?<![a-z])terminat|task_success|libero_terminated|success_once|"
++    r"success_at_end|signaled term",
++    re.IGNORECASE,
++)
++
++#: Result keys that carry the predicate (``truncated`` goes too, so that the set
++#: of fields never depends on how the episode is going).
++ORACLE_KEYS = frozenset(
++    {
++        "terminated",
++        "truncated",
++        "libero_terminated",
++        "task_success",
++        "success_once",
++        "success_at_end",
++    }
++)
++
++#: What a refused post-success env step reports when the fields are hidden (the
++#: original error text names the termination).
++REJECTED = "action rejected by the environment"
++
++#: Files in the run directory the planner may not read when the fields are hidden.
++DENIED_FILES = frozenset({"states.json"})
++
++
++def hides_fields(info: str) -> bool:
++    return info in ("hidden", "fields")
++
++
++def rewrites_text(info: str) -> bool:
++    return info in ("hidden", "prompt")
++
++
++def has_oracle_terms(obj: Any) -> bool:
++    """True when ``obj`` (any JSON-like value) still names the oracle."""
++    try:
++        text = obj if isinstance(obj, str) else json.dumps(obj, default=str)
++    except (TypeError, ValueError):
++        text = str(obj)
++    return FORBIDDEN.search(text) is not None
++
++
++# ---------------------------------------------------------------------------
++# fields
++# ---------------------------------------------------------------------------
++
++
++def scrub_fields(obj: Any) -> Any:
++    """A copy of a tool result / state record without the oracle fields.
++
++    Bytes (embedded images) are passed through untouched.
++    """
++    if isinstance(obj, dict):
++        out: dict[str, Any] = {}
++        doubled = obj.get("name") == "pi0_doubled"
++        for key, value in obj.items():
++            if key in ORACLE_KEYS:
++                continue
++            if doubled and key in ("success", "diagnostics"):
++                continue
++            if key == "error" and isinstance(value, str) and "signaled term" in value:
++                out[key] = REJECTED
++                continue
++            if key == "traceback" and isinstance(value, str) and FORBIDDEN.search(value):
++                continue
++            out[key] = scrub_fields(value)
++        return out
++    if isinstance(obj, list):
++        return [scrub_fields(v) for v in obj]
++    if isinstance(obj, tuple):
++        return tuple(scrub_fields(v) for v in obj)
++    return obj
++
++
++def report_success(obj: Any, success_now: bool) -> Any:
++    """``oracle_dynamics=free`` with a visible oracle: the primitives never see the
++    predicate (they run on), so their ``terminated`` fields and the
++    ``pi0_doubled`` success flag are set to the predicate at the latest env step."""
++    if isinstance(obj, dict):
++        out = {k: report_success(v, success_now) for k, v in obj.items()}
++        if "terminated" in out:
++            out["terminated"] = bool(success_now)
++        if out.get("name") == "pi0_doubled":
++            for key in ("success", "task_success"):
++                if key in out:
++                    out[key] = bool(success_now)
++        return out
++    if isinstance(obj, list):
++        return [report_success(v, success_now) for v in obj]
++    return obj
++
++
++# ---------------------------------------------------------------------------
++# text
++# ---------------------------------------------------------------------------
++
++_JUDGE = (
++    "The environment does NOT tell you whether the task has succeeded: judge it "
++    "yourself from the images and the robot state."
++)
++
++#: Rendered system prompt of the ``proven`` knowledge profile. Each fragment is one
++#: rendered line (or a unique part of one) and must occur exactly once.
++PROMPT_REWRITES: tuple[tuple[str, str], ...] = (
++    (
++        "> `terminated == true`.",
++        "> completion of the task in `task_language`. " + _JUDGE,
++    ),
++    (
++        "> `terminated:false`). Do NOT call `reset`.",
++        "> failure judgement). Do NOT call `reset`.",
++    ),
++    (
++        "CONTACT skill (success :=",
++        "CONTACT skill (it returns no success",
++    ),
++    (
++        "`terminated`). Use it for drawer/door open-close AND insertions; call it",
++        "flag; check the images). Use it for drawer/door open-close AND insertions; call it",
++    ),
++    (
++        "when a clean placement won't terminate, SUSPECT WRONG-TARGET",
++        "when a clean placement does not achieve the goal, SUSPECT WRONG-TARGET",
++    ),
++    (
++        "`terminated:false` with the max eef-y reached.",
++        "failure audit with the max eef-y reached.",
++    ),
++    (
++        "`terminated`, `truncated`, coord-free `state`, an `artifacts`",
++        "coord-free `state`, an `artifacts`",
++    ),
++    (
++        "YOUR GOAL: produce top-level `terminated == true` in ONE episode.",
++        "YOUR GOAL: complete the task in `task_language` in ONE episode. "
++        + _JUDGE
++        + " Call `finish` with status 'success' only if you believe the goal holds "
++        "now, otherwise with status 'failure'.",
++    ),
++    (
++        "When the task terminates, OR when your single best",
++        "When you judge the task complete, OR when your single best",
++    ),
++    (
++        "(success or honest `terminated:false`), then call `finish`.",
++        "(your honest judgement of success or failure), then call `finish`.",
++    ),
++    (
++        "turn) with success := `terminated` (no lift / no gripper-close",
++        "turn) and returns no success flag (no lift / no gripper-close",
++    ),
++    (
++        "stuck-audit (`terminated:false`) and call `finish`.",
++        "stuck-audit (judged failure) and call `finish`.",
++    ),
++    (
++        "WHEN top-level `terminated == true` in the latest tool result:",
++        "WHEN you judge from the images and the state that the task goal holds:",
++    ),
++    ("terminated:true.", "self_assessed_success:true."),
++    (
++        "terminated:false + strategy_notes describing what you tried in this one",
++        "self_assessed_success:false + strategy_notes describing what you tried in this one",
++    ),
++)
++
++#: Tool descriptions (joined strings of ``robots.libero.tools.TOOLS_SPEC``).
++TOOL_SPEC_REWRITES: dict[str, tuple[tuple[str, str], ...]] = {
++    "pi0_doubled": (
++        (
++            "Returned success/task_success only mirrors official termination; for "
++            "intermediate contact skills, success=false does not necessarily mean "
++            "the contact interaction failed. ",
++            "It returns no success flag. ",
++        ),
++    ),
++    "release": (
++        (" Triggers libero termination if the matching On/In predicate is met.", ""),
++    ),
++}
++
++#: Guides the planner reads with ``read_text_file``.
++GUIDE_REWRITES: dict[str, tuple[tuple[str, str], ...]] = {
++    "pro_hybrid_guide.md": (
++        (
++            "target object, places it on the plate, and `terminated=False` because the",
++            "target object, places it on the plate, and the task is NOT complete because the",
++        ),
++        ('  "terminated": true', '  "self_assessed_success": true'),
++        (
++            "exploration, write `terminated: false` with what you tried and which step",
++            "exploration, write `self_assessed_success: false` with what you tried and which step",
++        ),
++        ("  honest `terminated:false`.", "  honest failure audit."),
++    ),
++    "strict_hybrid_guide.md": (
++        (
++            "top-level `terminated` (the benchmark predicate), which is name-independent.",
++            "your own check of the goal relation in the images (no success flag is reported).",
++        ),
++        ("`terminated:false` audit — never warp.", "failure audit — never warp."),
++        (
++            "(success or an honest `terminated:false`), then call `finish`. Never",
++            "(success or an honest failure judgement), then call `finish`. Never",
++        ),
++        (
++            "| `view_env_state` result | `step`, top-level `task_language`, `terminated`, `truncated`, `state.{",
++            "| `view_env_state` result | `step`, top-level `task_language`, `state.{",
++        ),
++        (
++            "// success mirrors terminated only; inspect image/state for intermediates.",
++            "// returns no success flag; inspect image/state evidence.",
++        ),
++        (
++            "// Open gripper to place. Triggers libero termination if the On/In predicate met.",
++            "// Open gripper to place.",
++        ),
++        (
++            "10. `release` — predicate (`On`/`In`) checks → `terminated=True` if hit.",
++            "10. `release` — check in the next image whether the `On`/`In` relation holds.",
++        ),
++        (
++            "  `terminated` in the returned view.",
++            "  the images in the returned view.",
++        ),
++        (
++            "  `terminated=false` and the object",
++            "  normally and the object",
++        ),
++        (
++            "When top-level `terminated == true`:",
++            "When you judge from the images and the state that the task goal holds:",
++        ),
++        ("  `terminated: true`.", "  `self_assessed_success: true`."),
++        (
++            "`{output_dir}/{recipe_tag}.json` with `terminated: false` +",
++            "`{output_dir}/{recipe_tag}.json` with `self_assessed_success: false` +",
++        ),
++        (
++            "  top-level `terminated` (the benchmark predicate).",
++            "  the images (no success flag is reported).",
++        ),
++    ),
++}
++
++_REDACTED = "(goal check)"
++
++
++def apply_rewrites(
++    text: str,
++    rewrites: tuple[tuple[str, str], ...],
++    where: str,
++    *,
++    strict: bool = True,
++) -> str:
++    """Apply ``rewrites`` in order; ``strict``: each fragment occurs exactly once."""
++    for old, new in rewrites:
++        n = text.count(old)
++        if strict and n != 1:
++            raise RuntimeError(f"{where}: expected exactly one {old!r}, found {n}")
++        text = text.replace(old, new)
++    return text
++
++
++def check_clean(text: str, where: str) -> None:
++    """Raise if ``text`` still names the oracle."""
++    bad = [line for line in text.splitlines() if FORBIDDEN.search(line)]
++    if bad:
++        raise RuntimeError(f"{where}: oracle term left in {len(bad)} line(s): {bad[:3]}")
++
++
++def rewrite_prompt(text: str, variant: str) -> str:
++    """The rendered ``system`` / ``user`` prompt without any reference to a success flag."""
++    if variant == "system":
++        text = apply_rewrites(text, PROMPT_REWRITES, "system prompt")
++    check_clean(text, f"{variant} prompt")
++    return text
++
++
++def rewrite_tool_specs(specs: list[dict[str, Any]]) -> list[dict[str, Any]]:
++    """A copy of the tool schemas with descriptions that name no success flag."""
++    out = copy.deepcopy(specs)
++    for spec in out:
++        rewrites = TOOL_SPEC_REWRITES.get(spec.get("name", ""))
++        if rewrites:
++            spec["description"] = apply_rewrites(
++                spec.get("description", ""), rewrites, f"tool {spec['name']}"
++            )
++    check_clean(json.dumps(out), "tool specs")
++    return out
++
++
++def rewrite_guide(name: str, text: str, *, strict: bool = False) -> str:
++    """A guide's text without references to a success flag.
++
++    ``read_text_file`` may return a truncated file, so at run time the fragments are
++    replaced where present and any term a cut fragment leaves behind is redacted;
++    the tests run this with ``strict=True`` on the full guides.
++    """
++    text = apply_rewrites(text, GUIDE_REWRITES.get(name, ()), f"guide {name}", strict=strict)
++    if strict:
++        check_clean(text, f"guide {name}")
++        return text
++    return FORBIDDEN.sub(_REDACTED, text)
++
++
++__all__ = [
++    "DENIED_FILES",
++    "FORBIDDEN",
++    "ORACLE_DYNAMICS",
++    "ORACLE_INFO",
++    "ORACLE_KEYS",
++    "REJECTED",
++    "apply_rewrites",
++    "check_clean",
++    "has_oracle_terms",
++    "hides_fields",
++    "report_success",
++    "rewrite_guide",
++    "rewrite_prompt",
++    "rewrite_tool_specs",
++    "rewrites_text",
++    "scrub_fields",
++]
+diff --git a/robots/libero/robot_spec.py b/robots/libero/robot_spec.py
+index dcebbec..cfe4720 100644
+--- a/robots/libero/robot_spec.py
++++ b/robots/libero/robot_spec.py
+@@ -23,9 +23,9 @@ from functools import partial
+ from pathlib import Path
+ from typing import TYPE_CHECKING, Any
+ 
+-from robots.libero.prompt_bundle import system_prompt, user_prompt
++from robots.libero.prompt_bundle import LiberoPromptBundle, system_prompt, user_prompt
++from robots.libero.prompts.oracle_free import ORACLE_DYNAMICS, ORACLE_INFO
+ from rpent.dashboard.events import DashboardEventSink
+-from rpent.robots.prompt_bundle import PromptBundle
+ from rpent.robots.robot_spec import RobotSpec, RunConfig
+ from rpent.robots.runtime import try_spawn_server, try_wait_server
+ from rpent.utils.config import get_memory_dir, get_repo_root
+@@ -97,7 +97,7 @@ def get_robot_spec() -> RobotSpec:
+     """
+     return RobotSpec(
+         name="libero",
+-        prompts=PromptBundle(
++        prompts=LiberoPromptBundle(
+             system=system_prompt,
+             user=user_prompt,
+         ),
+@@ -117,6 +117,8 @@ def get_toolkit(
+     attempts_per_session: int = 0,
+     state_output_dir: Path | str | None = None,
+     knowledge_profile: str = "mem-proven",
++    oracle_info: str = "visible",
++    oracle_dynamics: str = "coupled",
+ ):
+     """Return the LIBERO toolkit (common tools + LIBERO primitives)."""
+     from robots.libero.toolkit import LiberoToolkit
+@@ -128,6 +130,8 @@ def get_toolkit(
+         attempts_per_session=attempts_per_session,
+         state_output_dir=state_output_dir,
+         knowledge_profile=knowledge_profile,
++        oracle_info=oracle_info,
++        oracle_dynamics=oracle_dynamics,
+     )
+ 
+ 
+@@ -202,6 +206,23 @@ def _add_cli_args(parser: argparse.ArgumentParser, use_dashboard: bool) -> None:
+         "keeps only the cross-task Proven levers: no memory library, guides, "
+         "seed-0 references, per-task recipes, or file-reading tools.",
+     )
++    parser.add_argument(
++        "--oracle-info",
++        choices=ORACLE_INFO,
++        default="visible",
++        help="what the planner learns about LIBERO's success predicate: visible "
++        "(default, unchanged), hidden (no success fields and no text that refers "
++        "to them), fields (fields removed, text unchanged) or prompt (text "
++        "rewritten, fields kept). Non-default values need --knowledge-profile proven.",
++    )
++    parser.add_argument(
++        "--oracle-dynamics",
++        choices=ORACLE_DYNAMICS,
++        default="coupled",
++        help="coupled (default, unchanged): primitives stop as soon as the task "
++        "succeeds and later env steps are refused. free: the environment keeps "
++        "running after success; success is only logged.",
++    )
+     parser.add_argument(
+         "--cuda-device",
+         type=int,
+@@ -237,6 +258,15 @@ def _parse_config(args: argparse.Namespace) -> RunConfig:
+             "--knowledge-profile proven uses no external memory: it takes no "
+             "--explore, --memory-dir, or --memory-profile local"
+         )
++    oracle_info = getattr(args, "oracle_info", "visible")
++    oracle_dynamics = getattr(args, "oracle_dynamics", "coupled")
++    if (oracle_info, oracle_dynamics) != ("visible", "coupled") and (
++        explore or knowledge_profile != "proven"
++    ):
++        raise ValueError(
++            "--oracle-info / --oracle-dynamics other than visible / coupled need "
++            "--knowledge-profile proven and no --explore"
++        )
+     memory_profile = requested_profile or ("local" if explore else "hf")
+     if memory_profile == "hf" and args.memory_dir is not None:
+         raise ValueError("--memory-dir requires --memory-profile local or --explore")
+@@ -260,6 +290,7 @@ def _parse_config(args: argparse.Namespace) -> RunConfig:
+         "mode": "explore" if explore else "eval",
+         "memory_profile": memory_profile,
+         "knowledge_profile": knowledge_profile,
++        "oracle_info": oracle_info,
+         "memory_dir": str(memory_dir),
+         "reference_tag": f"{args.suite.replace('libero_', '')}_t{args.task}_s0",
+         # Per-cell inbox: parallel explore runs must not append to a shared file.
+diff --git a/robots/libero/toolkit.py b/robots/libero/toolkit.py
+index 0f1b8da..5bc6257 100644
+--- a/robots/libero/toolkit.py
++++ b/robots/libero/toolkit.py
+@@ -25,9 +25,10 @@ from pathlib import Path
+ from typing import Any
+ 
+ from robots.libero import tools as libero_tools
++from robots.libero.prompts import oracle_free
+ from rpent.dashboard.events import DashboardEventSink
+ from rpent.tools.state import EnvState
+-from rpent.tools.toolkit import Toolkit, readonly
++from rpent.tools.toolkit import Toolkit, ToolResult, readonly
+ from rpent.utils.logging import get_logger, get_output_dir
+ 
+ logger = get_logger("libero_toolkit")
+@@ -50,12 +51,39 @@ class LiberoToolkit(Toolkit):
+         attempts_per_session: int = 0,
+         state_output_dir: Path | str | None = None,
+         knowledge_profile: str = "mem-proven",
++        oracle_info: str = "visible",
++        oracle_dynamics: str = "coupled",
+     ) -> None:
++        if oracle_info not in oracle_free.ORACLE_INFO:
++            raise ValueError(f"unsupported oracle_info: {oracle_info!r}")
++        if oracle_dynamics not in oracle_free.ORACLE_DYNAMICS:
++            raise ValueError(f"unsupported oracle_dynamics: {oracle_dynamics!r}")
++        self._oracle_info = oracle_info
++        self._oracle_dynamics = oracle_dynamics
++        self._hide_fields = oracle_free.hides_fields(oracle_info)
++        self._oracle: dict[str, Any] = {
++            "info": oracle_info,
++            "dynamics": oracle_dynamics,
++            "finish_called": False,
++            "finish_status": None,
++            "finish_summary": None,
++            "finish_step": None,
++            "finish_env_steps": None,
++            "final_success": None,
++            "final_success_source": None,
++            "scrub_residual": 0,
++            "file_read_terms": 0,
++            "log": [],
++        }
+         self._state_output_dir = Path(state_output_dir or get_output_dir())
+         state = EnvState(self._state_output_dir)
++        if self._hide_fields:
++            state.blob_filter = oracle_free.scrub_fields
+         super().__init__(dashboard_events=dashboard_events, state=state)
+         if knowledge_profile == "proven":
+             self._confine_read_tools()
++        if self._hide_fields or oracle_free.rewrites_text(oracle_info):
++            self._guard_oracle_reads()
+         if mode not in {"evaluation", "exploration"}:
+             raise ValueError(f"unsupported LIBERO toolkit mode: {mode!r}")
+         self._mode = mode
+@@ -94,6 +122,112 @@ class LiberoToolkit(Toolkit):
+             spec, handler = self._tools[name]
+             self.add_tool(name, spec, confined(handler))
+ 
++    def _guard_oracle_reads(self) -> None:
++        """Oracle hidden: guides read through ``read_text_file`` lose their
++        references to a success flag (``prompt``), and the run's success records
++        (``states.json``, logs, transcripts, proxy records) are not readable
++        (``fields``)."""
++        from rpent.tools import common
++
++        spec, handler = self._tools["read_text_file"]
++        guides = (Path(libero_tools.__file__).resolve().parent / "guides").resolve()
++        rewrite = oracle_free.rewrites_text(self._oracle_info)
++        hide = self._hide_fields
++
++        @readonly
++        def guarded(path: str = "", **kwargs):
++            target = common._resolve(path).resolve() if path else None
++            if hide and target is not None and (
++                target.name in oracle_free.DENIED_FILES
++                or target.suffix == ".log"
++                or target.name.startswith("transcript_")
++                or "rl_turns" in target.parts
++            ):
++                return {"error": f"not readable in this run: {target.name}"}
++            result = handler(path, **kwargs) if path else handler(**kwargs)
++            if (
++                rewrite
++                and target is not None
++                and guides in target.parents
++                and isinstance(result, dict)
++                and isinstance(result.get("content"), str)
++            ):
++                result = {
++                    **result,
++                    "content": oracle_free.rewrite_guide(target.name, result["content"]),
++                }
++            return result
++
++        self.add_tool("read_text_file", spec, guarded)
++
++    def get_tools_spec(self) -> list[dict[str, Any]]:
++        specs = super().get_tools_spec()
++        if oracle_free.rewrites_text(self._oracle_info):
++            specs = oracle_free.rewrite_tool_specs(specs)
++        return specs
++
++    def execute_tool(self, name: str, input_dict: dict[str, Any]) -> ToolResult:
++        if name == "finish":
++            self._note_finish(input_dict)
++        res = super().execute_tool(name, input_dict)
++        if not self._hide_fields:
++            return res
++        scrubbed = oracle_free.scrub_fields(res.result)
++        if oracle_free.has_oracle_terms(
++            {k: v for k, v in scrubbed.items() if k != "_image_bytes"}
++            if isinstance(scrubbed, dict)
++            else scrubbed
++        ):
++            # a file the planner wrote itself (its audit) may use the word; anything
++            # else is a leak the scrubber missed
++            key = "file_read_terms" if name == "read_text_file" else "scrub_residual"
++            self._oracle[key] += 1
++            if key == "scrub_residual":
++                logger.warning("oracle term left in the result of %s", name)
++        return ToolResult(name=res.name, result=scrubbed, call_id=res.call_id)
++
++    # ------------------------------------------------------------------
++    # Oracle bookkeeping (for the experimenter; never shown to the planner)
++    # ------------------------------------------------------------------
++    def _success_now(self) -> tuple[bool, str]:
++        """The success predicate on the current state, and where it came from."""
++        env = self._primitives.env
++        try:
++            return bool(env.check_success()), "check_success"
++        except Exception as e:  # an env server without the RPC
++            logger.warning("check_success failed (%s); using the last step's flag", e)
++            return bool(getattr(env, "success_now", env.terminated)), "last_step"
++
++    def _note_finish(self, input_dict: dict[str, Any]) -> None:
++        env = self._primitives.env
++        ok, source = self._success_now()
++        self._oracle.update(
++            finish_called=True,
++            finish_status=input_dict.get("status"),
++            finish_summary=input_dict.get("summary"),
++            finish_step=self._state.latest_step,
++            finish_env_steps=getattr(env, "n_steps", None),
++            final_success=ok,
++            final_success_source=source,
++        )
++
++    def oracle_summary(self) -> dict[str, Any]:
++        """What the experimenter needs about success; written to the transcript."""
++        env = self._primitives.env
++        out = dict(self._oracle)
++        if not out["finish_called"]:
++            ok, source = self._success_now()
++            out["final_success"] = ok
++            out["final_success_source"] = "end_of_episode:" + source
++        out.update(
++            sticky_success=bool(getattr(env, "success_ever", self._solved)),
++            success_now_at_end=bool(getattr(env, "success_now", env.terminated)),
++            first_success_env_step=getattr(env, "first_success_step", None),
++            env_steps=getattr(env, "n_steps", None),
++            latest_step=self._state.latest_step,
++        )
++        return out
++
+     def _register_libero_tools(self) -> None:
+         # These read-only handlers need the run's EnvState bound in. Every
+         # other spec binds to a primitive-driver method and captures state by
+@@ -174,12 +308,26 @@ class LiberoToolkit(Toolkit):
+     ) -> dict[str, Any]:
+         frame_start = self._action_frame_cursor
+         self._action_frame_cursor = self._primitives.recorded_frame_count()
++        env = self._primitives.env
++        if self._oracle_dynamics == "free" and not self._hide_fields:
++            # the primitives ran on past success: report the predicate as it is now
++            result = oracle_free.report_success(result, env.success_now)
+         record = libero_tools.dump_state(
+             self._primitives,
+             self._state,
+             log={"command": command, "result": result, "elapsed_s": elapsed_s},
+         )
+-        self._solved |= record.terminated
++        self._solved |= bool(getattr(env, "success_ever", record.terminated))
++        self._oracle["log"].append(
++            {
++                "tool": command.get("action"),
++                "step": record.step_idx,
++                "env_steps": getattr(env, "n_steps", None),
++                "success_now": bool(getattr(env, "success_now", record.terminated)),
++                "success_ever": bool(getattr(env, "success_ever", record.terminated)),
++                "error": bool(isinstance(result, dict) and result.get("error")),
++            }
++        )
+         if self._dashboard_events.enabled:
+             try:
+                 frames = self._primitives.frame_slice(frame_start)
+@@ -215,6 +363,8 @@ class LiberoToolkit(Toolkit):
+             check_cancelled=self.raise_if_cancelled,
+             **primitives_kwargs,
+         )
++        primitives.oracle_hidden = self._hide_fields
++        primitives.env.decouple_termination = self._oracle_dynamics == "free"
+         primitives.reset()
+         primitives.start_recording()
+         self._action_frame_cursor = primitives.recorded_frame_count()
+diff --git a/robots/libero/tools.py b/robots/libero/tools.py
+index f63e655..c383a96 100644
+--- a/robots/libero/tools.py
++++ b/robots/libero/tools.py
+@@ -66,6 +66,9 @@ class LiberoPrimitives:
+         self._last_obs_eef_pos = None
+         self._last_obs_eef_z = None
+         self._last_obs_gripper = None
++        # ``--oracle-info hidden|fields``: ``pi0_pick`` reports only its own
++        # lift/grip test, never the success predicate (set by LiberoToolkit).
++        self.oracle_hidden = False
+         # Per-env-step frame buffer for diagnostic video rendering.
+         # Toggled via start_recording() / stop_recording().
+         self._recording = False
+@@ -200,7 +203,11 @@ class LiberoPrimitives:
+                 success = True
+                 break
+             if self.env.terminated or self.env.truncated:
+-                success = self.env.terminated
++                success = (
++                    bool(descent_done and ascended and closed)
++                    if self.oracle_hidden
++                    else self.env.terminated
++                )
+                 break
+ 
+         return {
+@@ -918,7 +925,9 @@ def dump_state(
+     log = log or {}
+     with env_state.record_step(
+         state=state,
+-        terminated=primitives.env.terminated,
++        terminated=getattr(
++            primitives.env, "reported_terminated", primitives.env.terminated
++        ),
+         truncated=primitives.env.truncated,
+         command=log.get("command"),
+         result=log.get("result"),
+diff --git a/rpent/cli/main.py b/rpent/cli/main.py
+index e007115..290f3f5 100644
+--- a/rpent/cli/main.py
++++ b/rpent/cli/main.py
+@@ -436,6 +436,7 @@ def main() -> int:
+     t0 = time.time()
+     finish_result, messages, agent_error = None, [], None
+     solved = False
++    oracle_summary = None
+     stats: dict = {}
+     first_user_msg: str | None = user_msg
+     if await_first_prompt is not None:
+@@ -484,6 +485,8 @@ def main() -> int:
+                     ),
+                     state_output_dir=state_output_dir,
+                     knowledge_profile=getattr(args, "knowledge_profile", "mem-proven"),
++                    oracle_info=getattr(args, "oracle_info", "visible"),
++                    oracle_dynamics=getattr(args, "oracle_dynamics", "coupled"),
+                 )
+             else:
+                 toolkit = get_toolkit(
+@@ -509,6 +512,11 @@ def main() -> int:
+                     if solved:
+                         recipe_path = toolkit.write_recipe(recipe_tag)
+             finally:
++                if hasattr(toolkit, "oracle_summary"):
++                    try:
++                        oracle_summary = toolkit.oracle_summary()
++                    except Exception as exc:  # never lose the episode over it
++                        logger.warning("oracle summary failed: %s", exc)
+                 toolkit.close()
+             if solved:
+                 break
+@@ -544,6 +552,7 @@ def main() -> int:
+         "model": args.model,
+         "elapsed_s": round(elapsed, 1),
+         "solved": solved,
++        "oracle": oracle_summary,
+         "agent_error": agent_error,
+         "finish": finish_result,
+         "stats": stats,
+diff --git a/rpent/tools/state.py b/rpent/tools/state.py
+index 9c93ddc..58fdb47 100644
+--- a/rpent/tools/state.py
++++ b/rpent/tools/state.py
+@@ -97,6 +97,9 @@ class EnvState:
+ 
+     def __init__(self, output_dir: Path | str):
+         self._output_dir = Path(output_dir)
++        # Optional ``blob -> blob`` applied to every step written to the manifest
++        # (LIBERO ``--oracle-info hidden|fields`` drops the success fields there).
++        self.blob_filter: Any = None
+         self.reset()
+ 
+     # -- private file resolution -----------------------------------------
+@@ -142,7 +145,12 @@ class EnvState:
+         temporary = self._temporary_file(destination)
+         manifest = {
+             "run_artifacts": sorted(self._run_artifacts),
+-            "steps": [record.to_blob() for record in self._steps],
++            "steps": [
++                self.blob_filter(record.to_blob())
++                if self.blob_filter is not None
++                else record.to_blob()
++                for record in self._steps
++            ],
+         }
+         try:
+             with temporary.open("w") as file:

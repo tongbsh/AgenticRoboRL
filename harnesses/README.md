@@ -17,6 +17,7 @@ A harness is described by a `harness.yaml` (format: `rl/harness_cfg.py`) and a `
 | `minimal/` | 60-line toy agent, stand-in model server and trainer (no GPU); runs in the test suite | `result_json` |
 | `rpent_libero/` | RPent on LIBERO-PRO (needs `patches/rpent/`) | `rpent_libero` |
 | `capx_libero/` | [CaP-X](https://github.com/capgym/cap-x) on its LIBERO-PRO tasks: the model writes Python over the harness's APIs, no VLA | `result_json` |
+| `rpent_libero_c/` | RPent on LIBERO-PRO for research plan C: evaluation with the oracle switches of `patches/rpent/rpent_oracle_c.patch`, recorded in passthrough mode (`research/c/README.md`) | `rpent_libero` |
 
 Try the whole loop on a laptop:
 

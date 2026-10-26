@@ -30,6 +30,8 @@
   eval:                           # optional: how `local_ctl.py eval` differs from a training rollout
     direct: false                 # true = episodes talk to the model server directly (no recording proxy, so the
                                   #   harness's own sampling settings stay as they are); model_url = <model.url>/v1
+    passthrough: false            # true (with direct: false) = episodes go through the recording proxy, which keeps
+                                  #   the harness's own sampling settings and records every call (rl/proxy.py --passthrough)
     cmd: "..."                    # optional: the episode command for evaluation (default: episode.cmd)
   train:                          # optional; without it a round stops after the samples are built
     cmd: "torchrun --nproc_per_node 8 rl/train_rl.py --samples {samples} --model_path {weights0} --ref_files {weights0} {resume_arg} --output_dir {new_weights}"
@@ -136,8 +138,11 @@ def load(path: str | Path) -> dict:
     if not isinstance(ev, dict):
         raise ConfigError(f"{path}: 'eval' must be a mapping")
     ev.setdefault("direct", False)
+    ev.setdefault("passthrough", False)
     if not isinstance(ev["direct"], bool) or ("cmd" in ev and not isinstance(ev["cmd"], str)):
         raise ConfigError(f"{path}: eval.direct must be true/false and eval.cmd a string")
+    if not isinstance(ev["passthrough"], bool) or (ev["passthrough"] and ev["direct"]):
+        raise ConfigError(f"{path}: eval.passthrough must be true/false and needs eval.direct: false")
     ep.setdefault("dir", DEFAULT_DIR)
     ep.setdefault("timeout_s", 7200)
     ep.setdefault("on_timeout", "failure")

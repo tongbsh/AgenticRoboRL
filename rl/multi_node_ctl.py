@@ -218,6 +218,8 @@ def cmd_worker(a) -> int:
     cfg = HC.apply_vars(HC.load(a.config), HC.parse_vars(a.var))
     if spec.get("eval_cmd") and cfg["eval"].get("cmd"):
         cfg["episode"]["cmd"] = cfg["eval"]["cmd"]
+    if spec.get("tasks"):
+        cfg["tasks_list"] = HC.load_tasks(Path(spec["tasks"]))
     cfg["episode"]["dir"] = "lease_{lease}/" + cfg["episode"]["dir"]
     by_id = {t["task_id"]: t for t in cfg["tasks_list"]}
     claims, workers, eps = D / "claims", D / "workers", D / "eps"
@@ -237,7 +239,8 @@ def cmd_worker(a) -> int:
         with lock:
             if shared["stack"] is None:
                 shared["stack"] = LC.Stack(cfg, eps, workers / f"{a.label}_logs", spec["weights"], spec["policy_version"],
-                                           Path(spec["run_dir"]), proxy=not spec["direct"])
+                                           Path(spec["run_dir"]), proxy=not spec["direct"],
+                                           passthrough=bool(spec.get("passthrough")))
             return shared["stack"]
 
     def slot():
@@ -293,11 +296,13 @@ def cmd_worker(a) -> int:
 # ---------------------------------------------------------------------------
 
 
-def write_jobs(D: Path, jobs: list[dict], weights: str, policy_version: str, run_dir: Path, direct: bool, eval_cmd: bool) -> None:
+def write_jobs(D: Path, jobs: list[dict], weights: str, policy_version: str, run_dir: Path, direct: bool, eval_cmd: bool,
+               passthrough: bool = False, tasks: str | None = None) -> None:
     D.mkdir(parents=True, exist_ok=True)
     if not (D / "jobs.json").is_file():
         write_json(D / "jobs.json", {"weights": weights, "policy_version": policy_version, "run_dir": str(run_dir),
-                                     "direct": direct, "eval_cmd": eval_cmd, "jobs": jobs})
+                                     "direct": direct, "passthrough": passthrough, "tasks": tasks,
+                                     "eval_cmd": eval_cmd, "jobs": jobs})
     for d in ("claims", "workers", "eps"):
         (D / d).mkdir(exist_ok=True)
 
@@ -500,6 +505,9 @@ def cmd_train(a) -> int:
 def cmd_eval(a) -> int:
     cl = load_cluster(a.cluster)
     cfg = controller_cfg(cl, a)
+    if a.tasks:
+        cfg["tasks"] = str(Path(a.tasks).resolve())
+        cfg["tasks_list"] = HC.load_tasks(Path(cfg["tasks"]))
     run_dir = Path(a.run_dir).resolve()
     D = run_dir / "eval" / a.tag
     st_path = run_dir / f"eval_{a.tag}_state.json"
@@ -508,7 +516,8 @@ def cmd_eval(a) -> int:
     plan = LC.eval_plan(cfg, a.init_key, a.repeats)
     jobs = [{"task_id": t["task_id"], "init_id": i, "attempt": att, "extra": {"round": 0, "run_dir": str(run_dir), "weights0": weights}}
             for t, i, att in plan]
-    write_jobs(D, jobs, weights, a.tag, run_dir, direct=cfg["eval"]["direct"], eval_cmd=bool(cfg["eval"].get("cmd")))
+    write_jobs(D, jobs, weights, a.tag, run_dir, direct=cfg["eval"]["direct"], eval_cmd=bool(cfg["eval"].get("cmd")),
+               passthrough=cfg["eval"]["passthrough"], tasks=cfg["tasks"] if a.tasks else None)
     log(f"eval {a.tag}: {len(jobs)} episodes over {len(cl['hosts'])} hosts, weights {weights}")
     if not run_phase(cl, a, st, D, run_dir, lambda: write_json(st_path, st)):
         return 3
@@ -549,6 +558,7 @@ def main() -> int:
     e.add_argument("--cluster", required=True); e.add_argument("--config", required=True); e.add_argument("--run-dir", required=True)
     e.add_argument("--weights", required=True); e.add_argument("--tag", required=True)
     e.add_argument("--repeats", type=int, default=1)
+    e.add_argument("--tasks", default=None, help="a tasks.jsonl to use instead of the harness's (e.g. other inits)")
     e.add_argument("--init-key", required=True, choices=HC.INIT_KEYS,
                    help="which inits of tasks.jsonl to run, always named: val_init_ids (choosing checkpoints / the training pool), "
                         "eval_init_ids (reported numbers), init_ids (training inits, e.g. collecting data)")

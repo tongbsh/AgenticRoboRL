@@ -16,6 +16,10 @@ where <episode key> is the cell's path under the run's output root
 
 A request that times out, cannot connect, or gets 408 / 429 / 5xx from vLLM is
 sent again after 1, 2 and 4 s; the fourth failure returns 502 to the planner.
+
+--passthrough (evaluation): the planner's own sampling fields are sent unchanged; the
+proxy only adds the fields it needs for its records (token ids, logprobs). An
+evaluation that must keep the harness's sampling settings can still be recorded.
 """
 from __future__ import annotations
 
@@ -118,7 +122,7 @@ class Recorder:
         return idx
 
 
-def build_app(upstream: str, recorder: Recorder, timeout_s: float) -> FastAPI:
+def build_app(upstream: str, recorder: Recorder, timeout_s: float, passthrough: bool = False) -> FastAPI:
     app = FastAPI()
     client = httpx.AsyncClient(base_url=upstream, timeout=httpx.Timeout(timeout_s, connect=30.0))
 
@@ -153,8 +157,11 @@ def build_app(upstream: str, recorder: Recorder, timeout_s: float) -> FastAPI:
             raise HTTPException(status_code=400, detail="streaming is not supported by the RL proxy")
         client_sampling = {k: body.get(k) for k in SAMPLING_KEYS + ("seed", "logprobs", "top_logprobs")}
         client_asked_logprobs = bool(body.get("logprobs"))
-        sent = {**body, **RL_SAMPLING, **ADDED_KEYS}
-        sent.pop("top_logprobs", None)
+        if passthrough:
+            sent = {**body, **ADDED_KEYS}
+        else:
+            sent = {**body, **RL_SAMPLING, **ADDED_KEYS}
+            sent.pop("top_logprobs", None)
         t0 = time.time()
         resp = await send("/v1/chat/completions", sent)
         t1 = time.time()
@@ -209,9 +216,11 @@ def main() -> None:
     ap.add_argument("--out-root", required=True)
     ap.add_argument("--policy-version", required=True)
     ap.add_argument("--timeout-s", type=float, default=7200.0)
+    ap.add_argument("--passthrough", action="store_true",
+                    help="keep the client's sampling fields (evaluation); only token ids / logprobs are added")
     a = ap.parse_args()
     rec = Recorder(Path(a.out_root), a.policy_version)
-    uvicorn.run(build_app(a.upstream, rec, a.timeout_s), host="127.0.0.1", port=a.port,
+    uvicorn.run(build_app(a.upstream, rec, a.timeout_s, passthrough=a.passthrough), host="127.0.0.1", port=a.port,
                 log_level="warning", timeout_keep_alive=7200)
 
 

@@ -1,3 +1,7 @@
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# research plan C: local configuration and run outputs
+research/c/c.env
+runs/

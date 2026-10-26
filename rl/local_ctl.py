@@ -131,7 +131,7 @@ class Stack:
     """model server (optional) + recording proxy + the harness's services, for one set of weights"""
 
     def __init__(self, cfg: dict, eps_root: Path, logs: Path, weights: str, policy_version: str, run_dir: Path,
-                 proxy: bool = True):
+                 proxy: bool = True, passthrough: bool = False):
         self.procs: list[Proc] = []
         v = {**cfg.get("vars", {}), "weights": weights, "config_dir": cfg["config_dir"], "run_dir": str(run_dir), "python": sys.executable}
         cwd = resolve_cwd(cfg, cfg["episode"]["cwd"])
@@ -145,7 +145,8 @@ class Stack:
             if proxy:
                 cmd = (f"{shlex.quote(sys.executable)} {shlex.quote(str(HERE / 'proxy.py'))} --port {int(cfg['proxy_port'])} "
                        f"--upstream {shlex.quote(m['url'].rstrip('/'))} --out-root {shlex.quote(str(eps_root))} "
-                       f"--policy-version {policy_version} --timeout-s {float(cfg['episode']['timeout_s'])}")
+                       f"--policy-version {policy_version} --timeout-s {float(cfg['episode']['timeout_s'])}"
+                       + (" --passthrough" if passthrough else ""))
                 p = Proc("proxy", cmd, logs / "proxy.log", str(HERE), env={"PYTHONPATH": ""})
                 self.procs.append(p)
                 wait_ready(p, f"http://127.0.0.1:{int(cfg['proxy_port'])}/healthz", 120)
@@ -457,6 +458,9 @@ def parse_shard(spec: str | None) -> tuple[int, int]:
 
 def cmd_eval(a) -> int:
     cfg = HC.apply_vars(HC.load(a.config), HC.parse_vars(a.var))
+    if a.tasks:
+        cfg["tasks"] = str(Path(a.tasks).resolve())
+        cfg["tasks_list"] = HC.load_tasks(Path(cfg["tasks"]))
     si, sn = parse_shard(a.shard)
     if a.shard_by == "task":
         cfg["tasks_list"] = [t for k, t in enumerate(cfg["tasks_list"]) if k % sn == si]
@@ -480,12 +484,14 @@ def cmd_eval(a) -> int:
     out.mkdir(parents=True, exist_ok=True)
     weights = weights_arg(a.weights)
     direct = cfg["eval"]["direct"]
+    passthrough = cfg["eval"]["passthrough"]
     if cfg["eval"].get("cmd"):
         cfg["episode"]["cmd"] = cfg["eval"]["cmd"]
     jobs = [HC.episode_vars(cfg, t, i, att, eps, weights, {"round": 0, "run_dir": str(run_dir), "weights0": weights}, direct=direct)
             for t, i, att in plan]
-    log(f"eval {a.tag}: {len(jobs)} episodes, weights {weights}" + (" (direct to the model server, no proxy)" if direct else ""))
-    stack = Stack(cfg, eps, out / "logs", weights, a.tag, run_dir, proxy=not direct)
+    log(f"eval {a.tag}: {len(jobs)} episodes, weights {weights}" + (" (direct to the model server, no proxy)" if direct else "")
+        + (" (recording proxy in passthrough mode)" if passthrough else ""))
+    stack = Stack(cfg, eps, out / "logs", weights, a.tag, run_dir, proxy=not direct, passthrough=passthrough)
     try:
         infos = run_episodes(cfg, jobs, stack, run_dir / "STOP")
     finally:
@@ -549,6 +555,7 @@ def main() -> int:
     e.add_argument("--shard", default="", metavar="I/N", help="only the tasks whose index in tasks.jsonl is I modulo N (one controller per GPU)")
     e.add_argument("--shard-by", choices=("task", "episode"), default="task",
                    help="episode: deal out the episodes, not the tasks (a task is then in several reports: merge with --sum-tasks)")
+    e.add_argument("--tasks", default=None, help="a tasks.jsonl to use instead of the harness's (e.g. other inits)")
     e.add_argument("--init-key", required=True, choices=HC.INIT_KEYS,
                    help="which inits of tasks.jsonl to run, always named: val_init_ids (choosing checkpoints / the training pool), "
                         "eval_init_ids (reported numbers), init_ids (training inits, e.g. collecting data)")
