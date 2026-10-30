@@ -15,6 +15,8 @@ Outcomes per episode (from the transcript's "oracle" block, patches/rpent/rpent_
   FC         false claim: claimed and not Y_final
   MS         missed success: Y_sticky and not (claimed and Y_final)
   NF         no finish call (turn / time budget ran out, or an error)
+  timed_out  the planner hit RPent's --planner-timeout-s (a subset of NF; wall-clock, so it depends on the GPU and on
+             whatever else runs on it -- compare it across the cells of a contrast)
 Infrastructure failures (rl/adapters/rpent_libero.py) are left out; pairs need both episodes.
 
 Conditions: V = visible/coupled, M-all = hidden/free, M-info = hidden/coupled, M-dyn = visible/free,
@@ -126,7 +128,8 @@ def episode_row(tr_path: Path, stage: str, meta: dict) -> dict | None:
         "Y_sticky": int(y_sticky), "Y_final": int(bool(y_final)) if y_final is not None else None,
         "finish_called": int(finish), "finish_status": status or None, "claimed": int(claimed),
         "FC": int(claimed and not bool(y_final)), "MS": int(y_sticky and not (claimed and bool(y_final))),
-        "NF": int(not finish), "turns": stats.get("turns_used"), "tool_calls": stats.get("tool_calls"),
+        "NF": int(not finish), "timed_out": int("timed out" in str(v.get("error") or "").lower()),
+        "turns": stats.get("turns_used"), "tool_calls": stats.get("tool_calls"),
         "requests": stats.get("requests"), "elapsed_s": tr.get("elapsed_s"),
         "calls_after_success": (len(log) - first - 1) if first is not None else None,
         "first_success_env_step": o.get("first_success_env_step"), "env_steps": o.get("env_steps"),
@@ -178,7 +181,7 @@ def summarise_cells(rows: list[dict]) -> list[dict]:
         row = {"planner": planner, "condition": cond, "episodes": len(rs), "valid": n,
                "infrastructure": sum(r["failure_kind"] == "infrastructure" for r in rs),
                "unpatched": sum(not r["patched"] for r in rs)}
-        for k in ("Y_sticky", "Y_final", "claimed", "FC", "MS", "NF"):
+        for k in ("Y_sticky", "Y_final", "claimed", "FC", "MS", "NF", "timed_out"):
             s = sum(r[k] for r in val)
             row[k] = s / n if n else None
             if k in ("Y_sticky", "Y_final"):
@@ -311,12 +314,13 @@ def fmt(x, nd=3):
 def report(summary: dict) -> str:
     L = [f"# Plan C analysis: {', '.join(summary['stages'])}", ""]
     L += ["## Cells", "", "| planner | condition | valid / episodes | Y_sticky | Y_final [95% CI] | claimed | FC | MS | NF | "
-          "turns | oracle gap | probe cov. | judge cov. |", "|" + "---|" * 13]
+          "timeouts | turns | oracle gap | probe cov. | judge cov. |", "|" + "---|" * 14]
     for r in summary["cells"]:
         ci = r.get("Y_final_ci") or [None, None]
         L.append(f"| {r['planner']} | {r['condition']} | {r['valid']} / {r['episodes']} | {fmt(r['Y_sticky'])} | "
                  f"{fmt(r['Y_final'])} [{fmt(ci[0])}, {fmt(ci[1])}] | {fmt(r['claimed'])} | {fmt(r['FC'])} | "
-                 f"{fmt(r['MS'])} | {fmt(r['NF'])} | {fmt(r['turns_mean'], 1)} | {fmt(r['oracle_gap'])} | "
+                 f"{fmt(r['MS'])} | {fmt(r['NF'])} | {fmt(r['timed_out'])} | {fmt(r['turns_mean'], 1)} | "
+                 f"{fmt(r['oracle_gap'])} | "
                  f"{fmt(r['p_probe_coverage'], 2)} | {fmt(r['f_vlm_coverage'], 2)} |")
     c0 = summary.get("c0")
     if c0 and c0.get("tests"):

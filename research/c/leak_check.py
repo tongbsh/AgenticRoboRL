@@ -12,8 +12,10 @@ For every episode (a directory with RPent's transcript_*.json, its proxy records
   (b) fields  oracle_info hidden|fields: no oracle field in any tool result or in states.json; the run's own scrub
               counter (oracle.scrub_residual) is 0
   (c) free    oracle_dynamics free: no env step refused after the first success
-  (d) coupled oracle_dynamics coupled: an episode that succeeded and then called finish recorded final_success true
-              (after success the env refuses every step, so the state cannot change)
+  (d) coupled oracle_dynamics coupled: no env step after the end of the action chunk in which success first held
+              (env_steps - first_success_env_step < VLA_CHUNK). A pi0.5 chunk runs as one RPC, so the original
+              protocol lets the rest of that chunk execute and can undo the success; such an episode is a warning
+              (finish then sees final_success false), not a failure
 
   python research/c/leak_check.py runs/c/c0 [--json out.json]
 Exit code 1 when any check fails.
@@ -33,6 +35,7 @@ FORBIDDEN = re.compile(
 )
 ORACLE_KEYS = {"terminated", "truncated", "libero_terminated", "task_success", "success_once", "success_at_end"}
 REFUSED = re.compile(r"signaled term|action rejected by the environment", re.IGNORECASE)
+VLA_CHUNK = 5  # env steps per pi0.5 action chunk (RPent pi05_vla_server num_action_chunks)
 
 
 def load_json_last(path: Path):
@@ -144,9 +147,17 @@ def check_episode(ep: Path, tr_path: Path) -> dict:
         n_err = sum(1 for e in log[first + 1:] if e.get("error"))
         if n_err:
             res["warn"].append(f"(c) free: {n_err} tool error(s) after the first success (check they are not refusals)")
-    # (d) coupled dynamics: success then finish => final success
-    if dyn == "coupled" and o.get("sticky_success") and o.get("finish_called") and o.get("final_success") is False:
-        res["fail"].append("(d) coupled: succeeded and finished, but final_success is false")
+    # (d) coupled dynamics: the env stops within the action chunk in which success first held
+    if dyn == "coupled" and o.get("sticky_success"):
+        first_step, steps = o.get("first_success_env_step"), o.get("env_steps")
+        if not isinstance(first_step, int) or not isinstance(steps, int):
+            res["warn"].append("(d) coupled: no first_success_env_step / env_steps in the oracle block")
+        elif steps - first_step >= VLA_CHUNK:
+            res["fail"].append(f"(d) coupled: {steps - first_step} env steps after the first success (step {first_step}),"
+                               f" the env must stop within its action chunk ({VLA_CHUNK} steps)")
+        elif o.get("finish_called") and o.get("final_success") is False:
+            res["warn"].append(f"(d) coupled: success at env step {first_step} undone by the rest of its action chunk "
+                               f"(stopped at {steps}); finish saw final_success false")
     return res
 
 

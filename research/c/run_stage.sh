@@ -4,8 +4,12 @@
 #   research/c/run_stage.sh c0_ext   C0 extension:  same cells on val inits 47-49                     (960 episodes)
 #   research/c/run_stage.sh c1       C1 audit:      {sft, rl} x {V, M-all} on eval inits 1-10        (3200 episodes)
 #                                                   (+ base model with INCLUDE_BASE=1)
+#   research/c/run_stage.sh c1a      C1 in halves:  the same cells on eval inits 1-5, then           (1600 episodes)
+#   research/c/run_stage.sh c1b                     on eval inits 6-10; c1a + c1b = c1, analysed     (1600 episodes)
+#                                                   together after c1b (run either c1 or c1a + c1b)
 #   research/c/run_stage.sh c2       C2 2x2:        {sft, rl} x {M-info, M-dyn} on eval inits 1-5    (1600 episodes)
-#                                                   (+ M-field / M-prompt with C2_SPLIT=1)
+#                                                   (+ M-field / M-prompt with C2_SPLIT=1); analysed with
+#                                                   whichever of c1 / c1a / c1b exist (pairs need eval inits 1-5)
 # Each cell is resumable (run the stage again); a finished cell is skipped quickly.
 set -euo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
@@ -13,7 +17,7 @@ source "$HERE/c.env"
 STAGE=${1:?stage}
 case $STAGE in
   c0|c0_ext) CELLS=("sft visible coupled" "sft hidden free" "rl visible coupled" "rl hidden free") ;;
-  c1) CELLS=("sft visible coupled" "sft hidden free" "rl visible coupled" "rl hidden free")
+  c1|c1a|c1b) CELLS=("sft visible coupled" "sft hidden free" "rl visible coupled" "rl hidden free")
       if [ "${INCLUDE_BASE:-0}" = 1 ]; then CELLS+=("base visible coupled" "base hidden free"); fi ;;
   c2) CELLS=("sft hidden coupled" "sft visible free" "rl hidden coupled" "rl visible free")
       if [ "${C2_SPLIT:-0}" = 1 ]; then CELLS+=("sft fields coupled" "sft prompt coupled" "rl fields coupled" "rl prompt coupled"); fi ;;
@@ -27,7 +31,10 @@ done
 "$CTL_PYTHON" "$HERE/leak_check.py" "$RUNS_DIR/$STAGE" --json "$RUNS_DIR/$STAGE/leak_check.json" \
   || echo "WARNING: leak checks failed, see $RUNS_DIR/$STAGE/leak_check.json -- do not use this stage before fixing"
 case $STAGE in
-  c0) STAGES="c0" ;; c0_ext) STAGES="c0 c0_ext" ;; c1) STAGES="c1" ;; c2) STAGES="c1 c2" ;;
+  c0) STAGES="c0" ;; c0_ext) STAGES="c0 c0_ext" ;; c1) STAGES="c1" ;; c1a) STAGES="c1a" ;; c1b) STAGES="c1a c1b" ;;
+  c2) STAGES=""
+      for s in c1 c1a c1b; do [ -d "$RUNS_DIR/$s" ] && STAGES+="$s "; done
+      STAGES+="c2" ;;
 esac
 # shellcheck disable=SC2086
 "$CTL_PYTHON" "$HERE/analyze.py" --runs "$RUNS_DIR" --stages $STAGES --out "$RUNS_DIR/analysis/${STAGES// /+}"

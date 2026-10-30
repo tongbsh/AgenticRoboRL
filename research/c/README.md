@@ -113,6 +113,8 @@ research/c/smoke.sh      # 只用第一张 GPU，16 个回合，约 2–3 小时
 - `hidden/free` 和 `visible/free` 下有回合在成功之后还继续动作，并且没有被拒绝。这就是计划里的头号风险"成功后能否继续运行"，在真实 LIBERO 上第一次得到验证。
 - `hidden/*` 下，planner 看到的工具结果、prompt、工具说明里没有任何 oracle 字样。
 
+coupled 条件下的 (d) 警告不算失败：π0.5 的一个动作块（5 步）在一次 RPC 里执行完，成功如果发生在块的中间，块内剩下的动作照样执行，可能把成功撤销，`finish` 时 `final_success` 为 false。原版 RPent 就是这样，V 条件就是论文协议，所以照实记录。只有成功之后又走了 5 步以上（进入了下一个动作块），才说明 coupled 没起作用，记为失败。
+
 如果 (c) 失败（free 条件下成功后的动作被拒绝），说明这个 LIBERO 环境版本在成功后不能继续运行。此时 C 只能报告信息通道效应（V vs M-info），按计划 1.5 节降低因果表述。
 
 ## 5. 第 3 周：C0 试点与决策
@@ -125,7 +127,7 @@ research/c/run_stage.sh c0      # {sft, rl} × {V, M-all} × 80 任务 × 验证
 
 | `C decision` | 下一步 |
 |---|---|
-| `C_HOLDS` | `research/c/run_stage.sh c1` |
+| `C_HOLDS` | C1 前半 `research/c/run_stage.sh c1a`，然后 C2，最后 C1 后半（见第 6 节） |
 | `EXPAND`（中间档） | `research/c/run_stage.sh c0_ext`，在合并后的 `analysis/c0+c0_ext/report.md` 上按同一规则再判 |
 | `C_WEAK` | C 缩为 A 论文中的一节；照常发布无泄漏协议 |
 
@@ -141,13 +143,22 @@ research/c/run_stage.sh c0      # {sft, rl} × {V, M-all} × 80 任务 × 验证
 
 ```bash
 research/c/run_stage.sh c0_ext   # 仅中间档：验证 init 47–49，960 回合
-research/c/run_stage.sh c1       # 主审计：评测 init 1–10，3200 回合；同时复现论文的 65.1 / 71.0（V 条件的 Y_sticky）
-                                 #   INCLUDE_BASE=1 时加入 base 模型
-research/c/run_stage.sh c2       # 2×2 的另外两格：M-info、M-dyn，评测 init 1–5，1600 回合
-                                 #   C2_SPLIT=1 时加入 M-field、M-prompt；分析会合并 c1 和 c2
+research/c/run_stage.sh c1a      # C1 前半：{sft, rl} × {V, M-all}，评测 init 1–5，1600 回合 → analysis/c1a/
+research/c/smoke.sh              # C2 之前：确认 smoke 的 4 个单元都已跑完并通过（续跑，已完成的单元会跳过）
+research/c/run_stage.sh c2       # 2×2 的另外两格：M-info、M-dyn，评测 init 1–5，1600 回合 → analysis/c1a+c2/
+                                 #   C2_SPLIT=1 时加入 M-field、M-prompt
+research/c/run_stage.sh c1b      # C1 后半：评测 init 6–10，1600 回合 → analysis/c1a+c1b/（C1 的正式结果）
 ```
 
+C1 拆成两半只改变执行顺序，不改分析：C2 的 2×2 分解只用评测 init 1–5，c1a 跑完就能和 C2 配对，分解结果因此提前约一个 C1 半程拿到。规则：
+- C1 的结论（复现论文数字、C 的确认、RL 放大）只在 `analysis/c1a+c1b/` 上报告；`analysis/c1a/` 是中期结果。
+- c1b 不论 c1a 和 C2 的结果如何都要跑（事先承诺，不按中期结果决定是否继续）。
+- 卡多、时间够时也可以直接 `run_stage.sh c1`（评测 init 1–10 一次跑完，C2 的分析会自动合并 c1）。两种方式不要混用。
+- `INCLUDE_BASE=1` 时 C1 加入 base 模型。
+
 C1 的 V 条件就是论文的评测协议（800 回合 × 2 个 planner）。它的 `Y_sticky` 应接近论文的 65.1 / 71.0；偏差明显时，先排查环境，再看其他结果。
+
+planner 的墙钟上限与论文相同（`--planner-timeout-s 7200`），我们的卡比论文慢，所以超时更多，尤其是 RL planner。`report.md` 的 timeouts 一列是每个单元的超时比例：同一对比的两个单元应该接近。服务器和别人共用时，超时会随别人的负载变化，请在 `SERVER_LOG.md` 里记录运行期间各卡上有没有别人的进程。
 
 ## 7. 运行管理
 

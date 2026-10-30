@@ -22,15 +22,16 @@ PNG = base64.b64decode(
 
 
 def write_episode(cell_dir: Path, stage: str, suite: str, task: int, seed: int, *, y_sticky: bool, y_final: bool,
-                  finish: bool, status: str, info: str, dyn: str, p_probe=None, f_vlm=None, records=None):
+                  finish: bool, status: str, info: str, dyn: str, p_probe=None, f_vlm=None, records=None,
+                  oracle_extra=None, agent_error=None):
     ep = cell_dir / "g0" / "eval" / stage / "eps" / "local" / suite / f"task_{task:02d}" / f"seed_{seed:03d}" / "attempt_00"
     ep.mkdir(parents=True)
     log = [{"tool": "move_to", "step": 1, "env_steps": 10, "success_now": y_sticky, "success_ever": y_sticky, "error": False}]
     oracle = {"info": info, "dynamics": dyn, "finish_called": finish, "finish_status": status if finish else None,
               "finish_step": 1 if finish else None, "final_success": y_final, "sticky_success": y_sticky,
-              "scrub_residual": 0, "log": log, "latest_step": 1}
+              "scrub_residual": 0, "log": log, "latest_step": 1, **(oracle_extra or {})}
     records = records or []
-    tr = {"suite": suite, "task": task, "seed": seed, "solved": y_sticky, "agent_error": None, "oracle": oracle,
+    tr = {"suite": suite, "task": task, "seed": seed, "solved": y_sticky, "agent_error": agent_error, "oracle": oracle,
           "stats": {"turns_used": 12, "tool_calls": 11, "requests": len(records) if records else None}, "messages": []}
     (ep / "transcript_x.json").write_text(json.dumps(tr))
     (ep / "rl_turns").mkdir()
@@ -43,10 +44,11 @@ def write_episode(cell_dir: Path, stage: str, suite: str, task: int, seed: int, 
     return ep
 
 
-def make_stage(root: Path, stage: str, drop: float, seed: int = 0, n_tasks: int = 20, inits=(45, 46)):
+def make_stage(root: Path, stage: str, drop: float, seed: int = 0, n_tasks: int = 20, inits=(45, 46),
+               conditions=(("visible", "coupled"), ("hidden", "free"))):
     rng = np.random.default_rng(seed)
     for planner, extra in (("sft", 0.0), ("rl", 0.1)):
-        for info, dyn in (("visible", "coupled"), ("hidden", "free")):
+        for info, dyn in conditions:
             cell = root / stage / f"{planner}__{info}-{dyn}"
             cell.mkdir(parents=True)
             (cell / "cell.json").write_text(json.dumps({"planner": planner, "info": info, "dynamics": dyn}))
@@ -88,6 +90,30 @@ def test_analysis_c_weak_without_effect(tmp_path):
                                 and A.key(x) == A.key(r))
     res = A.c0_decision(A.cells(rows), ["rl", "sft"], seed=0)
     assert res["decision"] == "C_WEAK"
+
+
+def test_c1_halves_pool_and_pair_with_c2(tmp_path):
+    make_stage(tmp_path, "c1a", drop=0.3, inits=(1, 2))
+    make_stage(tmp_path, "c1b", drop=0.3, inits=(6, 7))
+    make_stage(tmp_path, "c2", drop=0.3, inits=(1, 2), conditions=(("hidden", "coupled"), ("visible", "free")))
+    c1 = A.cells(A.collect(tmp_path, ["c1a", "c1b"]))
+    assert len(c1[("sft", "V")]) == 20 * 4
+    assert A.c0_decision(c1, ["rl", "sft"], seed=0)["tests"]["sft:final_drop"]["n"] == 20 * 4
+    dec = A.decomposition(A.cells(A.collect(tmp_path, ["c1a", "c2"])), ["rl", "sft"], seed=0)
+    assert dec["sft:info_effect_coupled (V - M-info):Y_final"]["n"] == 20 * 2
+
+
+def test_timeouts_are_counted_per_cell(tmp_path):
+    cell = tmp_path / "c0" / "rl__visible-coupled"
+    cell.mkdir(parents=True)
+    (cell / "cell.json").write_text(json.dumps({"planner": "rl", "info": "visible", "dynamics": "coupled"}))
+    for t, err in enumerate((None, "API planner timed out after 7200s")):
+        write_episode(cell, "c0", "libero_goal_task", t, 45, y_sticky=False, y_final=False, finish=err is None,
+                      status="failure", info="visible", dyn="coupled", agent_error=err)
+    rows = A.collect(tmp_path, ["c0"])
+    assert all(r["valid"] for r in rows)                      # a planner timeout is the planner's failure
+    (summary,) = A.summarise_cells(rows)
+    assert summary["timed_out"] == 0.5 and summary["NF"] == 0.5
 
 
 def test_main_writes_report(tmp_path):
@@ -135,11 +161,21 @@ def test_leak_check_passes_clean_and_flags_leaks(tmp_path):
     assert "patched" in L.check_episode(unpatched, unpatched / "transcript_y.json")["fail"][0]
 
 
-def test_leak_check_coupled_final_success(tmp_path):
+def test_leak_check_coupled_stops_within_the_success_chunk(tmp_path):
     cell = tmp_path / "c0" / "sft__visible-coupled"
-    ep = write_episode(cell, "c0", "libero_goal_task", 1, 45, y_sticky=True, y_final=False, finish=True,
-                       status="success", info="visible", dyn="coupled")
-    assert any("(d) coupled" in f for f in L.check_episode(ep, ep / "transcript_x.json")["fail"])
+
+    def check(task, first, steps, y_final):
+        ep = write_episode(cell, "c0", "libero_goal_task", task, 45, y_sticky=True, y_final=y_final, finish=True,
+                           status="success", info="visible", dyn="coupled",
+                           oracle_extra={"first_success_env_step": first, "env_steps": steps})
+        return L.check_episode(ep, ep / "transcript_x.json")
+
+    clean = check(1, 245, 245, True)
+    assert clean["fail"] == [] and clean["warn"] == []
+    undone = check(2, 245, 248, False)  # the rest of the chunk undid the success: the original protocol, a warning
+    assert undone["fail"] == [] and any("(d) coupled" in w for w in undone["warn"])
+    late = check(3, 245, 250, False)    # a step in a later chunk: coupling is broken
+    assert any("(d) coupled" in f for f in late["fail"])
 
 
 # ---------------------------------------------------------------------------

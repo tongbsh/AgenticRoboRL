@@ -6,6 +6,8 @@ rl/harness_cfg.py's disjointness check.
   c0.jsonl      C0 pilot          val_init_ids  = [45, 46]
   c0_ext.jsonl  C0 extension      val_init_ids  = [47, 48, 49]
   c1.jsonl      C1 main audit     eval_init_ids = [1..10]  (the paper's evaluation inits)
+  c1a.jsonl     C1, first half    eval_init_ids = [1..5]   (c1a + c1b = c1, run as two stages so that C2 can be
+  c1b.jsonl     C1, second half   eval_init_ids = [6..10]   analysed after c1a; see research/c/README.md section 6)
   c2.jsonl      C2 2x2 cells      eval_init_ids = [1..5]
   smoke.jsonl   leak self-check   4 tasks (one per suite family), val_init_ids = [45]
 
@@ -20,6 +22,8 @@ STAGES = {
     "c0": {"val_init_ids": [45, 46]},
     "c0_ext": {"val_init_ids": [47, 48, 49]},
     "c1": {"eval_init_ids": list(range(1, 11))},
+    "c1a": {"eval_init_ids": list(range(1, 6))},
+    "c1b": {"eval_init_ids": list(range(6, 11))},
     "c2": {"eval_init_ids": list(range(1, 6))},
     "smoke": {"val_init_ids": [45]},
 }

@@ -2,7 +2,7 @@
 # One cell of plan C: one planner under one oracle condition on one stage's initial states, spread over $GPUS
 # (one rl/local_ctl.py evaluation controller per GPU, episodes dealt round-robin).
 #   research/c/run_cell.sh <stage> <planner> <oracle_info> <oracle_dynamics>
-#     stage            c0 | c0_ext | c1 | c2 | smoke         (research/c/tasks/<stage>.jsonl)
+#     stage            c0 | c0_ext | c1 | c1a | c1b | c2 | smoke   (research/c/tasks/<stage>.jsonl)
 #     planner          sft | rl | base                       ($SFT_WEIGHTS / $RL_WEIGHTS / $BASE_WEIGHTS)
 #     oracle_info      visible | hidden | fields | prompt
 #     oracle_dynamics  coupled | free
@@ -13,7 +13,7 @@ HERE=$(cd "$(dirname "$0")" && pwd)
 source "$HERE/c.env"
 GPUS=${CELL_GPUS:-$GPUS}
 STAGE=${1:?stage}; PLANNER=${2:?planner}; INFO=${3:?oracle_info}; DYN=${4:?oracle_dynamics}
-case $STAGE in c0|c0_ext|smoke) KEY=val_init_ids ;; c1|c2) KEY=eval_init_ids ;; *) echo "bad stage $STAGE"; exit 2 ;; esac
+case $STAGE in c0|c0_ext|smoke) KEY=val_init_ids ;; c1|c1a|c1b|c2) KEY=eval_init_ids ;; *) echo "bad stage $STAGE"; exit 2 ;; esac
 case $PLANNER in sft) W=$SFT_WEIGHTS ;; rl) W=$RL_WEIGHTS ;; base) W=$BASE_WEIGHTS ;; *) echo "bad planner $PLANNER"; exit 2 ;; esac
 case $INFO in visible|hidden|fields|prompt) ;; *) echo "bad oracle_info $INFO"; exit 2 ;; esac
 case $DYN in coupled|free) ;; *) echo "bad oracle_dynamics $DYN"; exit 2 ;; esac

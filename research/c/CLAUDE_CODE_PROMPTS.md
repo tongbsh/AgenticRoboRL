@@ -111,19 +111,61 @@ research/c/SERVER_LOG.md。前提是 smoke 的 leak_check 已经全部通过；�
 不要修改任何代码、阈值或判定规则，结果不论好坏都如实报告。把过程追加到 research/c/SERVER_LOG.md。
 ```
 
-## Prompt 4：后续阶段（c0_ext / c1 / c2）
+## Prompt 3b：C0 收尾，开始 C1 前半（c1a）
+
+C0 的 leak_check 有 5 个 (d) 失败，已确认是原版协议的行为而不是泄漏；检查 (d) 已修订。这段 prompt 先在已有数据上重跑检查和分析（不重跑回合），补齐 smoke，再开始 c1a。
 
 ```text
-继续方案 C：运行阶段 <c0_ext | c1 | c2>。先读 research/c/README.md 第 6 节，以及 research/c/SERVER_LOG.md 中上一
-阶段的决策记录，确认这个阶段确实是决策表要求的下一步；不是的话先停下问我。
+继续方案 C：C0 收尾，然后开始 C1 前半（c1a）。先拉取最新代码：git pull origin claude/practical-hamilton-9atn7u，
+然后读 research/c/README.md 第 4–6 节和 research/c/SERVER_LOG.md。
+
+背景：C0 的 leak_check 有 5 个 V 回合没通过检查 (d)。原因已经确认：coupled 条件下，env 要等成功所在的那个 5 步
+π0.5 动作块执行完才停，块内剩下的动作可能把成功撤销。原版 RPent 就是这样（V 条件就是论文协议），不是泄漏。
+新版 leak_check 把 (d) 改为：成功之后又走了 5 步以上才算失败，块内撤销记为警告。analyze.py 的 Cells 表新增了
+timeouts 一列（planner 墙钟超时的比例）。
+
+1. 在已有的 C0 数据上重跑检查和分析，不重跑任何回合：
+   - source research/c/c.env，然后 $CTL_PYTHON research/c/leak_check.py runs/c/c0 --json runs/c/c0/leak_check.json
+     预期：0 failure，原来那 5 个回合变成 (d) 警告。出现任何 failure 就停下报告。
+   - 用 run_stage.sh 最后一行的命令重跑分析（--stages c0 --out runs/c/analysis/c0）。确认除了新增的 timeouts 列，
+     其他数字与上次完全一致。把新的 Cells 表给我。
+2. 补齐 smoke：在 tmux 会话 c-smoke 中运行 research/c/smoke.sh（续跑，已完成的单元会跳过）。确认：
+   - 4 个单元都齐全，leak_check 为 0 failure；
+   - 重点看 visible-free 和 hidden-coupled 两个单元（C2 要用）。visible-free 里成功之后还继续动作的回合，
+     不能有被拒绝的动作。
+   smoke 没通过就停下报告，不要开始 c1a。
+3. 都通过后，在 tmux 会话 c-c1a 中运行 research/c/run_stage.sh c1a，输出用 tee 写到 runs/c/c1a/stage.out。
+   - 先按 C0 的实际速度估算总耗时，告诉我；
+   - 控制器失败的处理同 Prompt 3 第 3 步；
+   - 运行期间每天记录一次各卡上有没有别人的进程（nvidia-smi），写进 SERVER_LOG。
+   如果现在能用的卡比 c.env 里的 GPUS 多，先告诉我，不要自行修改。
+4. c1a 结束后（run_stage.sh 会自动跑判官、leak_check 和分析）：确认 leak_check 为 0 failure，把
+   runs/c/analysis/c1a/report.md 全文给我。这是中期结果，不据此做任何决策；下一步固定是 C2。
+
+不要修改任何代码、阈值或判定规则。把过程追加到 research/c/SERVER_LOG.md。
+```
+
+## Prompt 4：后续阶段（c2 / c1b，或中间档时的 c0_ext）
+
+顺序固定为 c1a → c2 → c1b。c1b 不论前面结果如何都要跑。
+
+```text
+继续方案 C：运行阶段 <c2 | c1b | c0_ext>。先拉取最新代码（git pull origin claude/practical-hamilton-9atn7u），
+读 research/c/README.md 第 6 节，以及 research/c/SERVER_LOG.md 中上一阶段的记录，确认这个阶段确实是下一步
+（顺序是 c1a → c2 → c1b；c0_ext 只在 C0 判为 EXPAND 时跑）。不是的话先停下问我。
 
 按 Prompt 3 的第 1–4 步执行，把其中的 c0 换成本阶段名：
 - tmux 会话名用 c-<阶段>；
-- 分析结果的路径：c0_ext 在 runs/c/analysis/c0+c0_ext/，c1 在 runs/c/analysis/c1/，c2 在 runs/c/analysis/c1+c2/。
+- 分析结果的路径：c2 在 runs/c/analysis/c1a+c2/，c1b 在 runs/c/analysis/c1a+c1b/，c0_ext 在
+  runs/c/analysis/c0+c0_ext/；
+- 运行期间每天记录一次各卡上有没有别人的进程。
 
 阶段特有的报告内容：
-- c1：V 条件的 Y_sticky 与论文 65.1（sft）/ 71.0（rl）的对比。这是论文评测协议的复现，差距超过 4 个点要单独说明。
 - c2：报告中 "Information / dynamics decomposition" 一节的数字，以及信息通道和动力学通道哪个效应更大。
+- c1b：这是 C1 的正式结果（评测 init 1–10 全部）。
+  - V 条件的 Y_sticky 与论文 65.1（sft）/ 71.0（rl）的对比。这是论文评测协议的复现，差距超过 4 个点要单独说明；
+  - C decision 和 RL amplification 一节；
+  - 各单元的 timeouts，同一对比的两个单元差别大时要指出。
 
 不要修改任何代码、阈值或判定规则。把过程追加到 research/c/SERVER_LOG.md。
 ```
