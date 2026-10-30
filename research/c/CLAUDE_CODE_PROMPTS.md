@@ -111,38 +111,60 @@ research/c/SERVER_LOG.md。前提是 smoke 的 leak_check 已经全部通过；�
 不要修改任何代码、阈值或判定规则，结果不论好坏都如实报告。把过程追加到 research/c/SERVER_LOG.md。
 ```
 
-## Prompt 3b：C0 收尾，开始 C1 前半（c1a）
+## Prompt 3b：C0 收尾 → 离线探针和更强判官 → 开始 c1a（10-30 更新版）
 
-C0 的 leak_check 有 5 个 (d) 失败，已确认是原版协议的行为而不是泄漏；检查 (d) 已修订。这段 prompt 先在已有数据上重跑检查和分析（不重跑回合），补齐 smoke，再开始 c1a。
+这段 prompt 先在 C0 的已有数据上重跑检查和分析，然后补齐 smoke，再在 C0 的 M-all 回合上跑离线探针和更强的判官（大约半天，结果决定要不要做 A-G），最后开始 c1a。如果服务器上已经按旧版 3b 开始了 c1a，这段 prompt 会让它跳过已做的部分。
 
 ```text
-继续方案 C：C0 收尾，然后开始 C1 前半（c1a）。先拉取最新代码：git pull origin claude/practical-hamilton-9atn7u，
-然后读 research/c/README.md 第 4–6 节和 research/c/SERVER_LOG.md。
+继续方案 C。先拉取最新代码：git pull origin claude/practical-hamilton-9atn7u。然后读：
+- research/c/README.md 第 4–6.1 节；
+- research/PLAN_C_then_A.md 1.6 节末尾的"C0 实测后的修订"和 2.6 节的"前置条件"；
+- research/c/SERVER_LOG.md。
 
-背景：C0 的 leak_check 有 5 个 V 回合没通过检查 (d)。原因已经确认：coupled 条件下，env 要等成功所在的那个 5 步
-π0.5 动作块执行完才停，块内剩下的动作可能把成功撤销。原版 RPent 就是这样（V 条件就是论文协议），不是泄漏。
-新版 leak_check 把 (d) 改为：成功之后又走了 5 步以上才算失败，块内撤销记为警告。analyze.py 的 Cells 表新增了
-timeouts 一列（planner 墙钟超时的比例）。
+背景（都已写进计划）：
+- C0 的 leak_check 有 5 个 V 回合没通过检查 (d)。已经确认这是原版 RPent 的行为：env 要等成功所在的那个 5 步
+  动作块执行完才停，块内剩下的动作可能撤销成功。这不是泄漏。新版 (d) 只把"成功后又走了 5 步以上"算作失败。
+- analyze.py 的 Cells 表新增了 timeouts 一列。
+- C1 拆成 c1a（评测 init 1–5）和 c1b（6–10），顺序是 c1a → c2 → c1b。c2 默认只跑 M-info。
+- 新增离线任务 research/c/run_offline.sh，不跑新回合：
+  - probe：在 M-all 回合上用三种问法重问 planner 是否成功；
+  - judge：用更强的 VLM 重判最后一帧。
+
+先看当前状态：tmux ls 和 SERVER_LOG。如果 c1a 已经在跑，不要动它，跳过第 1、2、6 步；离线任务（第 3–5 步）只能
+在不属于 c1a 的空闲卡上做，没有这样的卡就等 c1a 结束、开始 c2 之前再做，并告诉我。
 
 1. 在已有的 C0 数据上重跑检查和分析，不重跑任何回合：
-   - source research/c/c.env，然后 $CTL_PYTHON research/c/leak_check.py runs/c/c0 --json runs/c/c0/leak_check.json
+   - source research/c/c.env，然后运行 $CTL_PYTHON research/c/leak_check.py runs/c/c0 --json runs/c/c0/leak_check.json。
      预期：0 failure，原来那 5 个回合变成 (d) 警告。出现任何 failure 就停下报告。
-   - 用 run_stage.sh 最后一行的命令重跑分析（--stages c0 --out runs/c/analysis/c0）。确认除了新增的 timeouts 列，
-     其他数字与上次完全一致。把新的 Cells 表给我。
-2. 补齐 smoke：在 tmux 会话 c-smoke 中运行 research/c/smoke.sh（续跑，已完成的单元会跳过）。确认：
-   - 4 个单元都齐全，leak_check 为 0 failure；
-   - 重点看 visible-free 和 hidden-coupled 两个单元（C2 要用）。visible-free 里成功之后还继续动作的回合，
-     不能有被拒绝的动作。
-   smoke 没通过就停下报告，不要开始 c1a。
-3. 都通过后，在 tmux 会话 c-c1a 中运行 research/c/run_stage.sh c1a，输出用 tee 写到 runs/c/c1a/stage.out。
+   - 重跑分析：$CTL_PYTHON research/c/analyze.py --runs runs/c --stages c0 --out runs/c/analysis/c0。确认除了新增的
+     timeouts 列，其他数字与上次完全一致。
+2. 补齐 smoke：在 tmux 会话 c-smoke 中运行 research/c/smoke.sh（续跑，已完成的单元会跳过）。确认 4 个单元都齐全、
+   leak_check 为 0 failure；重点看 visible-free 和 hidden-coupled 两个单元（C2 要用），visible-free 里成功之后还继续
+   动作的回合不能有被拒绝的动作。smoke 没通过就停下报告。
+3. 准备离线任务：
+   - 下载更强的判官模型。优先 Qwen/Qwen3-VL-32B-Instruct-FP8，不行再用 Qwen/Qwen3-VL-30B-A3B-Instruct-FP8（HF 不通
+     就用 hf-mirror 或 modelscope）；
+   - 在 research/c/c.env 里加三行（参照 c.env.example 末尾）：STRONG_JUDGE_MODEL=<下载路径>、OFFLINE_GPU=<GPUS 里
+     的一张卡>、OFFLINE_PORT=18600。这三行是新增配置，可以写；c.env 里已有的设置不要改。
+4. 离线任务先试跑，再全量跑（现在卡是空的；全量预计半天左右）：
+   - 试跑：LIMIT=10 research/c/run_offline.sh probe c0，以及 LIMIT=10 research/c/run_offline.sh judge c0。检查：
+     - probe_variants.json 里 p_pre_yesno、p_pre_verbal、p_post_yesno 不为空；两个 yesno 的 details 里 source 是
+       "logprobs"；
+     - vlm_judge_strong.json 里 p_vlm 是 0–1 之间的连续值。
+     有报错或大量空值就停下，把日志（runs/c/c0/offline_*.log）和几个输出文件给我，不要改代码。
+   - 全量：在 tmux 会话 c-offline 中依次运行 research/c/run_offline.sh probe c0 和 research/c/run_offline.sh judge c0。
+     如果判官模型起不来（显存不够、架构不支持），先跳过 judge，记录原因，继续后面的步骤。
+5. 离线任务结束后重跑 c0 的分析（同第 1 步的命令），把 report.md 里 "Offline signals" 一节完整给我，包括标题里的
+   A-G 前置条件判定（AG_GO / AG_NO_GO）。这一步只汇报结果，不做任何决定。
+6. 在 tmux 会话 c-c1a 中运行 research/c/run_stage.sh c1a，输出用 tee 写到 runs/c/c1a/stage.out。
    - 先按 C0 的实际速度估算总耗时，告诉我；
    - 控制器失败的处理同 Prompt 3 第 3 步；
-   - 运行期间每天记录一次各卡上有没有别人的进程（nvidia-smi），写进 SERVER_LOG。
-   如果现在能用的卡比 c.env 里的 GPUS 多，先告诉我，不要自行修改。
-4. c1a 结束后（run_stage.sh 会自动跑判官、leak_check 和分析）：确认 leak_check 为 0 failure，把
-   runs/c/analysis/c1a/report.md 全文给我。这是中期结果，不据此做任何决策；下一步固定是 C2。
+   - 运行期间每天记录一次各卡上有没有别人的进程（nvidia-smi），写进 SERVER_LOG；
+   - 如果现在能用的卡比 c.env 里的 GPUS 多，先告诉我，不要自行修改。
+7. c1a 结束后（run_stage.sh 会自动跑判官、leak_check 和分析）：确认 leak_check 为 0 failure，把
+   runs/c/analysis/c1a/report.md 全文给我。这是中期结果，不据此做任何决策；下一步固定是 c2。
 
-不要修改任何代码、阈值或判定规则。把过程追加到 research/c/SERVER_LOG.md。
+除第 3 步写明的三行配置外，不要修改任何代码、阈值、判定规则或已有配置。把过程追加到 research/c/SERVER_LOG.md。
 ```
 
 ## Prompt 4：后续阶段（c2 / c1b，或中间档时的 c0_ext）
@@ -161,7 +183,8 @@ timeouts 一列（planner 墙钟超时的比例）。
 - 运行期间每天记录一次各卡上有没有别人的进程。
 
 阶段特有的报告内容：
-- c2：报告中 "Information / dynamics decomposition" 一节的数字，以及信息通道和动力学通道哪个效应更大。
+- c2：默认只跑 M-info（800 回合）。报告 "Information / dynamics decomposition" 一节中 V − M-info（信息通道）和
+  M-info − M-all（动力学通道）的数字，以及哪个效应更大。不要加 C2_DYN=1，除非我另外说。
 - c1b：这是 C1 的正式结果（评测 init 1–10 全部）。
   - V 条件的 Y_sticky 与论文 65.1（sft）/ 71.0（rl）的对比。这是论文评测协议的复现，差距超过 4 个点要单独说明；
   - C decision 和 RL amplification 一节；

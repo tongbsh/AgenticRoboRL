@@ -1,0 +1,196 @@
+paper_id,title,source,screen_title,reason
+2501.18867,UP-VLA: A Unified Understanding and Prediction Model for Embodied Agent,arxiv_query,exclude,"end-to-end VLA / policy model, no LLM planner loop"
+2503.13817,VARP: Reinforcement Learning from Vision-Language Model Feedback with Agent Regularized Preferences,arxiv_query,exclude,"reward from VLM feedback or a success detector, no planner loop"
+2503.22122,REMAC: Self-Reflective and Self-Evolving Multi-Agent Collaboration for Long-Horizon Robot Manipulation,arxiv_query,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2506.15740,SHADE-Arena: Evaluating Sabotage and Monitoring in LLM Agents,arxiv_query,exclude,not robotics
+2507.23391,Policy Learning from Large Vision-Language Model Feedback without Reward Modeling,arxiv_query,exclude,"reward from VLM feedback or a success detector, no planner loop"
+2508.19461,Reliable Weak-to-Strong Monitoring of LLM Agents,arxiv_query,exclude,not robotics
+2509.00328,Mechanistic interpretability for steering vision-language-action models,arxiv_query,exclude,"end-to-end VLA / policy model, no LLM planner loop"
+2509.23655,Focusing on What Matters: Object-Agent-centric Tokenization for Vision Language Action models,arxiv_query,exclude,"end-to-end VLA / policy model, no LLM planner loop"
+2510.09801,How can we assess human-agent interactions? Case studies in software agent design,arxiv_query,exclude,not robotics
+2511.03690,The OpenHands Software Agent SDK: A Composable and Extensible Foundation for Production Agents,arxiv_query,exclude,not robotics
+2511.07685,ResearchRubrics: A Benchmark of Prompts and Rubrics For Evaluating Deep Research Agents,arxiv_query,exclude,not robotics
+2511.18810,MergeVLA: Cross-Skill Model Merging Toward a Generalist Vision-Language-Action Agent,arxiv_query,exclude,"end-to-end VLA / policy model, no LLM planner loop"
+2512.23738,Enforcing Temporal Constraints for LLM Agents,arxiv_query,exclude,not robotics
+2601.02295,CycleVLA: Proactive Self-Correcting Vision-Language-Action Models via Subtask Backtracking and Minimum Bayes Risk Decoding,arxiv_query,maybe,needs the abstract / full text
+2601.02456,"InternVLA-A1: Unifying Understanding, Generation and Action for Robotic Manipulation",arxiv_query,exclude,"end-to-end VLA / policy model, no LLM planner loop"
+2601.14133,TwinBrainVLA: Unleashing the Potential of Generalist VLMs for Embodied Tasks via Asymmetric Mixture-of-Transformers,arxiv_query,exclude,"end-to-end VLA / policy model, no LLM planner loop"
+2601.20334,Demonstration-Free Robotic Control via LLM Agents,arxiv_query,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2602.01811,From Knowing to Doing Precisely: A General Self-Correction and Termination Framework for VLA models,arxiv_query,maybe,needs the abstract / full text
+2603.01694,MVR: Multi-view Video Reward Shaping for Reinforcement Learning,arxiv_query,exclude,"reward from VLM feedback or a success detector, no planner loop"
+2603.23149,Describe-Then-Act: Proactive Agent Steering via Distilled Language-Action World Models,arxiv_query,maybe,needs the abstract / full text
+2603.24060,RoboHarness: A Memory-Augmented Policy Harness for Vision-Language-Action Model Robustness via In-Context Adaptation,arxiv_query,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2604.05014,StarVLA: A Lego-like Codebase for Vision-Language-Action Model Developing,arxiv_query,exclude,"end-to-end VLA / policy model, no LLM planner loop"
+2604.11757,StarVLA-$α$: Reducing Complexity in Vision-Language-Action Systems,arxiv_query,exclude,"end-to-end VLA / policy model, no LLM planner loop"
+2604.12290,Frontier-Eng: Benchmarking Self-Evolving Agents on Real-World Engineering Tasks with Generative Optimization,arxiv_query,exclude,not robotics
+2605.03205,From Knowledge to Action: Outcomes of the 2025 Large Language Model (LLM) Hackathon for Applications in Materials Science and Chemistry,arxiv_query,exclude,not robotics
+2605.13403,RotVLA: Rotational Latent Action for Vision-Language-Action Model,arxiv_query,exclude,"end-to-end VLA / policy model, no LLM planner loop"
+2605.13775,RoboEvolve: Co-Evolving Planner-Simulator for Robotic Manipulation with Limited Data,arxiv_query,maybe,needs the abstract / full text
+2606.10918,Task Robustness via Re-Labelling Vision-Action Robot Data,arxiv_query,exclude,"end-to-end VLA / policy model, no LLM planner loop"
+2606.16458,RHO: Your Coding Agent is Secretly a Roboticist,arxiv_query,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2607.22642,"CRAFT: Learn the Schema, Execute the Plan",arxiv_query,exclude,not robotics
+2606.26443,WatchAct: A Benchmark for Behavior-Grounded Robot Manipulation,arxiv_query,exclude,benchmark / simulator / infrastructure
+2607.05377,Cortex: A Bidirectionally Aligned Embodied Agent Framework for Long-horizon Manipulation,arxiv_query,maybe,needs the abstract / full text
+2607.06018,RoboTALES: Learning Reasoning-Guided Robot Policies via Task-Aligned Simulated Futures,arxiv_query,exclude,"end-to-end VLA / policy model, no LLM planner loop"
+2607.08448,Harness VLA: Steering Frozen VLAs into Reliable Manipulation Primitives via Memory-Guided Agents,arxiv_query,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2607.09818,TS-Mask VLA: 2D Temporal-Spatial Masking for Vision-Language-Action Model with Effective Bridging,arxiv_query,exclude,"end-to-end VLA / policy model, no LLM planner loop"
+2607.18580,STeP: Signal Temporal Logic for Precise Specifications for Action Generation with Vision Language Models,arxiv_query,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2607.23515,LEACL: LLM-Enhanced Automatic Curriculum Learning for Reinforcement Learning in Long-Horizon Manipulation Tasks,arxiv_query,exclude,LLM outside the control loop
+2608.05738,In-Context VLA: Endowing Vision-Language-Action Models with Language via In-Context Post-Training and Agentic Tool Use,arxiv_query,maybe,needs the abstract / full text
+2608.20318,AI4AI-Bench: Benchmarking LLM Agents in Algorithmic Design for Recursive Self-Improvement,arxiv_query,exclude,not robotics
+2608.21247,Just Noticeable Difference Modeling for Token Compression in Vision-Language-Action Models,arxiv_query,exclude,"end-to-end VLA / policy model, no LLM planner loop"
+2608.28718,RoboPhys-3D: A Comprehensive Embodied World Model Evaluation via 3D Reconstruction,arxiv_query,exclude,benchmark / simulator / infrastructure
+2609.21022,Catch Me If You Can: Real-Time Feedback Denoising for Responsive VLAs,arxiv_query,exclude,"end-to-end VLA / policy model, no LLM planner loop"
+2609.22966,Transferring the Intelligence of VLMs to Robotic Control,arxiv_query,maybe,needs the abstract / full text
+2609.23578,AR-WAM: A Visual-Conditioned Agent-Ready World Action Model for Robotic Manipulation,arxiv_query,maybe,needs the abstract / full text
+2610.23880,AutoPruner: Agentic Depth Pruning for Vision-Language-Action Models,arxiv_query,exclude,LLM outside the control loop
+2609.29389,Robo-Harness K1: Harnessing Robot-Use Agents via Perception Augmentation,arxiv_query,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2609.29964,World Action Agent: Harnessing VLMs for Robot Manipulation via World Action Rehearsal,arxiv_query,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2609.30833,"Fast Plans, Faithful Actions: Closing the Planning-Execution Gap in Hierarchical Vision-Language-Action Models",arxiv_query,maybe,needs the abstract / full text
+2609.37359,Encore: Few-Shot Agentic Discovery of Manipulation Strategies,arxiv_query,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2609.38078,MotorMind: Scaffolding General Vision Language Models for Zero-Shot Robot Manipulation,arxiv_query,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2610.01939,"Fewer Tokens, Better Action: GPT-6 Astra Robot Agents with 14% Higher Success Rate but 65% Fewer Tokens",arxiv_query,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2610.02161,DuoMind: Enabling Distributed Multi-Robot Coordination with Semantic Communication,arxiv_query,maybe,needs the abstract / full text
+2610.03476,MobiAgent: Dual-Loop Recursive Policy Self-Improvement for Long-Horizon Mobile Manipulation,arxiv_query,maybe,needs the abstract / full text
+2610.06843,Recursive Video In-Context Learning for Agentic Robot,arxiv_query,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2610.15401,Harnessing VLM in Embodied RL: From Reward Regressor to Success Detector via Exploration-Augmented Key-Observation Gating,arxiv_query,exclude,"reward from VLM feedback or a success detector, no planner loop"
+2610.16238,Embodied Skill Bench: Benchmarking How Well Agents with Embodied Skills Perform on Physical Tasks,arxiv_query,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2610.18874,ChunkAct: Action Chunking for Agentic Robotics,arxiv_query,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2610.23334,"LAW: Unifying Language, Action, and World Modeling for Agentic Physical Intelligence",arxiv_query,maybe,needs the abstract / full text
+2610.25114,"Compile Once, Run Cheap: Frozen, Portable Skills for Embodied Agents, and What Recursive Self-Improvement Adds",arxiv_query,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2610.30113,Quant-Arena: Benchmarking LLM Agents for Quantitative Trading Research,arxiv_query,exclude,not robotics
+2610.35980,UnityBench-Mini3D: Evaluating LLM Agents for 3D Game Development in Unity,arxiv_query,exclude,not robotics
+2610.36533,RoboAuto: Autonomous Robot Program Search through Multi-Level Physical Understanding,arxiv_query,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2502.09560,EmbodiedBench: Comprehensive Benchmarking Multi-modal Large Language Models for Vision-Driven Embodied Agents,seed:ref_dfrc,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2502.19645,Fine-Tuning Vision-Language-Action Models: Optimizing Speed and Success,seed:ref_arrl,exclude,"end-to-end VLA / policy model, no LLM planner loop"
+2503.09516,Search-R1: Training LLMs to Reason and Leverage Search Engines with Reinforcement Learning,seed:ref_arrl ref_harness,exclude,not robotics
+2503.14734,GR00T N1: An Open Foundation Model for Generalist Humanoid Robots,seed:ref_dfrc ref_harness,exclude,"end-to-end VLA / policy model, no LLM planner loop"
+2504.07164,R2E-Gym: Procedural Environments and Hybrid Verifiers for Scaling Open-Weights SWE Agents,seed:ref_arrl,exclude,not robotics
+2504.13059,RoboTwin: Dual-Arm Robot Benchmark with Generative Digital Twins,seed:ref_harness,exclude,benchmark / simulator / infrastructure
+2504.16054,π0.5: a Vision-Language-Action Model with Open-World Generalization,seed:ref_arrl ref_dfrc ref_harness,exclude,"end-to-end VLA / policy model, no LLM planner loop"
+2504.19854,NORA: A Small Open-Sourced Generalist Vision Language Action Model for Embodied Tasks,seed:ref_arrl ref_harness,exclude,"end-to-end VLA / policy model, no LLM planner loop"
+2504.21798,SWE-smith: Scaling Data for Software Engineering Agents,seed:ref_arrl,exclude,not robotics
+2505.06111,UniVLA: Learning to Act Anywhere with Task-centric Latent Actions,seed:ref_arrl,exclude,"end-to-end VLA / policy model, no LLM planner loop"
+2505.22050,Reinforced Reasoning for Embodied Planning,seed:ref_arrl,maybe,needs the abstract / full text
+2506.20670,MMSearch-R1: Incentivizing LMMs to Search,seed:ref_harness,exclude,not robotics
+2506.21539,WorldVLA: Towards Autoregressive Action World Model,seed:ref_arrl,exclude,"end-to-end VLA / policy model, no LLM planner loop"
+2507.02592,WebSailor: Navigating Super-human Reasoning for Web Agent,seed:ref_harness,exclude,not robotics
+2508.03680,Agent Lightning: Train ANY AI Agents with Reinforcement Learning,seed:ref_arrl,exclude,not robotics
+2508.05748,WebWatcher: Breaking New Frontier of Vision-Language Deep Research Agent,seed:ref_harness,exclude,not robotics
+2508.07917,MolmoAct: Action Reasoning Models that can Reason in Space,seed:ref_arrl ref_harness,exclude,"end-to-end VLA / policy model, no LLM planner loop"
+2508.14040,ComputerRL: Scaling End-to-End Online Reinforcement Learning for Computer Use Agents,seed:ref_arrl,exclude,not robotics
+2509.02544,UI-TARS-2 Technical Report: Advancing GUI Agent with Multi-Turn Reinforcement Learning,seed:ref_arrl,exclude,not robotics
+2509.15965,RLinf: Flexible and Efficient Large-scale Reinforcement Learning via Macro-to-Micro Flow Transformation,seed:ref_arrl ref_harness,exclude,benchmark / simulator / infrastructure
+2509.20021,Embodied AI: From LLMs to World Models [Feature],seed:ref_dfrc,exclude,survey or foundation-model report
+2509.20328,Video models are zero-shot learners and reasoners,seed:ref_dfrc,exclude,benchmark / simulator / infrastructure
+2509.24160,Memory Transfer Planning: LLM-driven Context-Aware Code Adaptation for Robot Manipulation,seed:ref_arrl,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2509.25747,Best of Sim and Real: Decoupled Visuomotor Manipulation via Learning Control in Simulation and Perception in Real,seed:ref_dfrc,exclude,"end-to-end VLA / policy model, no LLM planner loop"
+2510.03342,"Gemini Robotics 1.5: Pushing the Frontier of Generalist Robots with Advanced Embodied Reasoning, Thinking, and Motion Transfer",seed:ref_harness,maybe,needs the abstract / full text
+2510.03827,LIBERO-PRO: Towards Robust and Fair Evaluation of Vision-Language-Action Models Beyond Memorization,seed:ref_arrl,exclude,benchmark / simulator / infrastructure
+2510.10274,X-VLA: Soft-Prompted Transformer as Scalable Cross-Embodiment Vision-Language-Action Model,seed:ref_arrl ref_harness,exclude,"end-to-end VLA / policy model, no LLM planner loop"
+2510.12693,ERA: Transforming VLMs into Embodied Agents via Embodied Prior Learning and Online Reinforcement Learning,seed:ref_arrl,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2510.13626,LIBERO-Plus: In-depth Robustness Analysis of Vision-Language-Action Models,seed:ref_dfrc,exclude,benchmark / simulator / infrastructure
+2510.14828,RoboGPT-R1: Enhancing Robot Task Planning with Reinforcement Learning,seed:ref_arrl,maybe,needs the abstract / full text
+2511.00917,Maestro: Orchestrating Robotics Modules with Vision-Language Models for Zero-Shot Generalist Robots,seed:ref_harness,maybe,needs the abstract / full text
+2511.14759,π*0.6: a VLA That Learns From Experience,seed:ref_dfrc,exclude,"end-to-end VLA / policy model, no LLM planner loop"
+2511.16108,SkyRL-Agent: Efficient RL Training for Multi-turn LLM Agent,seed:ref_arrl,exclude,not robotics
+2511.21631,Qwen3-VL Technical Report,seed:ref_harness,exclude,survey or foundation-model report
+2512.10675,Evaluating Gemini Robotics Policies in a Veo World Simulator,seed:ref_dfrc,exclude,benchmark / simulator / infrastructure
+2601.18692,A Pragmatic VLA Foundation Model,seed:ref_harness,exclude,"end-to-end VLA / policy model, no LLM planner loop"
+2601.22060,Vision-DeepResearch: Incentivizing DeepResearch Capability in Multimodal Large Language Models,seed:ref_harness,exclude,not robotics
+2603.04356,RoboCasa365: A Large-Scale Simulation Framework for Training and Benchmarking Generalist Robots,seed:ref_harness,exclude,benchmark / simulator / infrastructure
+2603.04466,Act-Observe-Rewrite: Multimodal Coding Agents as In-Context Policy Learners for Robot Manipulation,seed:ref_arrl,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2603.08519,AtomVLA: Scalable Post-Training for Robotic Manipulation via Predictive Latent World Models,seed:ref_arrl ref_harness,exclude,"end-to-end VLA / policy model, no LLM planner loop"
+2603.11558,RoboClaw: An Agentic Framework for Scalable Long-Horizon Robotic Tasks,seed:ref_harness,maybe,needs the abstract / full text
+2603.16860,DreamPlan: Efficient Reinforcement Fine-Tuning of Vision-Language Planners via Video World Models,seed:ref_arrl,maybe,needs the abstract / full text
+2603.22435,CaP-X: A Framework for Benchmarking and Improving Coding Agents for Robot Manipulation,seed:ref_arrl ref_harness,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2604.13942,Goal2Skill: Long-Horizon Manipulation with Adaptive Planning and Reflection,seed:cit_harness,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2605.03269,RLDX-1 Technical Report,seed:ref_harness,exclude,"end-to-end VLA / policy model, no LLM planner loop"
+2605.05185,OpenSearch-VL: An Open Recipe for Frontier Multimodal Search Agents,seed:ref_arrl,exclude,not robotics
+2605.18747,Code as Agent Harness,seed:ref_harness,maybe,needs the abstract / full text
+2605.19410,Vision Harnessing Agent for Open Ad-hoc Segmentation,seed:cit_harness,exclude,not robotics
+2605.24220,Polar: Agentic RL on Any Harness at Scale,seed:ref_arrl,exclude,not robotics
+2606.19419,Playful Agentic Robot Learning,seed:ref_harness,maybe,needs the abstract / full text
+2606.30613,Sequential Planning via Anchored Robotic Keypoints,seed:cit_harness,maybe,needs the abstract / full text
+2607.00272,ASPIRE: Agentic /Skills Discovery for Robotics,seed:ref_harness,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2607.13653,"Exploratory, Communicative, and Deployable: Vision-Driven Embodied Agents for Open-World Mobile Manipulation",seed:ref_arrl,maybe,needs the abstract / full text
+2607.18060,RoboHarness: Memory-Driven Orchestration of Heterogeneous Robot Policies for Long-Horizon Planning,seed:cit_harness,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2607.27703,"SpatialCLI: Learning to Reason With Spatial Tools, Then Without Them",seed:cit_harness,maybe,needs the abstract / full text
+2608.00303,CrystalMem: Elastic Memory for Self-Evolving LLM Agents via Knowledge Crystallization,seed:cit_harness,exclude,not robotics
+2608.09410,"Skills in Weights, Memory in Code: Hybrid Learning for Memory-Dependent Robot Manipulation",seed:cit_dfrc cit_harness,maybe,needs the abstract / full text
+2608.09516,HarnessWAM: Bridging Prediction and Deliberation in World Action Models,seed:cit_harness,maybe,needs the abstract / full text
+2608.14944,SkillComposer: Learning Reusable Skills for Natural-Language Robot Programming,seed:ref_arrl,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2608.16590,Zetta $\zeta$: An Efficient Closed-Loop Embodied Harness for Self-Evolving Physical Intelligence,seed:cit_harness,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2608.16889,Don't Drop the BATON: Long-Horizon Robot Manipulation via Agentic Subtask Exploration and Transition-aware Memory,seed:cit_harness ref_arrl,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2608.17393,LEGO-RL: Harness-Native Reinforcement Learning for Coding Agents,seed:ref_arrl,exclude,not robotics
+2608.17528,Agent Lightning v1.0: Towards Harnessed Agentic RL,seed:ref_arrl,exclude,not robotics
+2608.22971,ParallelWorld: Test-Time Scaling for Agentic Embodied Reasoning,seed:cit_harness,maybe,needs the abstract / full text
+2608.23224,Think Only When Needed: Prompt-Authority Control for Selective Slow-Path Intervention in Vision-Language-Action Manipulation,seed:cit_harness,maybe,needs the abstract / full text
+2608.25593,JIT-Agent: Scaling Harness Intelligence via Just-in-Time Harness Evolution,seed:cit_harness,maybe,needs the abstract / full text
+2608.29896,EMERGE-Policy: A Robot Mind Emerges Beyond a Single Policy,seed:cit_harness,maybe,needs the abstract / full text
+2609.10522,Show-Harness: Just a VLM Agent Can Play Robots,seed:cit_harness,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2609.11308,2AM: Grounding Agent-Side Memory as Guidance for Steerable Action Models in Long-Horizon Manipulation,seed:cit_harness,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2609.12541,Agent as Policy for Robotic Manipulation,seed:cit_harness ref_arrl,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2609.14219,Task-Specified Active Metrological Inspection with Measurement-Steered VLA Manipulation and Deterministic Evidence Gating,seed:cit_harness,maybe,needs the abstract / full text
+2609.15195,HarnessVLN: Unifying Training-Free Embodied Navigation through an Agent Harness,seed:cit_harness,maybe,needs the abstract / full text
+2609.16057,OmniHarness: Harnessing Generalizable Visual Generation via Symbolic Policy Learning,seed:cit_harness,exclude,not robotics
+2609.16074,World-Action Models for Robot Learning and Control: A Survey,seed:cit_harness,exclude,survey or foundation-model report
+2609.19413,From Rollout to Reset: A Graph-Based Harness for Autonomous Long-Horizon Manipulation Evaluation,seed:cit_harness,maybe,needs the abstract / full text
+2609.19974,MaskHarness-WAM: Instance-Grounded Harnessing for Long-Horizon Robot Manipulation,seed:cit_harness,maybe,needs the abstract / full text
+2609.20791,StageGuard: Learning Stage Transitions for Long-Horizon Robot Tasks via Agentic Distillation,seed:cit_harness,maybe,needs the abstract / full text
+2609.20822,Coding Agents with Harness for Safe Robot Control,seed:cit_harness,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2609.22274,CHOREO: Every Humanoid Skill as a Trajectory,seed:cit_harness,exclude,"end-to-end VLA / policy model, no LLM planner loop"
+2609.23580,TaskAnchor: Grounding Task State in Reactive VLAs for Long-Horizon Manipulation,seed:cit_harness,maybe,needs the abstract / full text
+2609.24170,An Unexpected Robot Policy: Early Evaluations of GPT-6 Astra on RoboDojo and Beyond,seed:cit_dfrc,maybe,needs the abstract / full text
+2609.28530,Know Your Body: A Harness for Direct and Self-Improving Robot Control with VLMs,seed:cit_harness,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2609.29166,HarnessPAI: An Evolving Harness for Physical AI,seed:cit_harness,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2609.29394,"RACaP: Agentic Reasoning, Acting, and Coding as Policies for Evolvable Robot Learning",seed:cit_harness,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2609.30233,Coding Agents for Generalized Task and Motion Planning Problems,seed:cit_dfrc,maybe,needs the abstract / full text
+2609.31112,DualManip: Agentic Dynamic Manipulation via Dual-Path Semantic Reasoning and Geometric Adaptation,seed:cit_harness,maybe,needs the abstract / full text
+2609.32862,RoboFoundry: System-as-Policy Evolution for Self-Learning Embodied Agents,seed:cit_harness,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2609.35432,Self-Evolving Coding Agents: From Digital Programs to Physical-World Intelligence,seed:cit_harness,maybe,needs the abstract / full text
+2609.36808,"Spotter: Let the Embodied Model Lead, and the VLM Reflect for It",seed:cit_harness,maybe,needs the abstract / full text
+2609.37583,RoboHarn-Evo: Evolving Hierarchical Physical Knowledge for Self-Improving Robotic Manipulation,seed:cit_harness,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2609.37810,"Explore, Execute, Evolve: A Skill Acquisition and Reuse Loop for Embodied Agents",seed:cit_harness,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2609.38616,"Correcting WHERE, Preserving HOW: Compositional Generalization for Vision-Language-Action Models via Referential Guidance",seed:cit_harness,exclude,"end-to-end VLA / policy model, no LLM planner loop"
+2609.38982,SimEX: Simulation-Integrated Robotics AutoResearch,seed:cit_harness,maybe,needs the abstract / full text
+2609.39304,Scale and Selection: What Makes Automatic Harness Evolution Work for Visual-Interface Robot Agents,seed:cit_harness,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2609.40306,DynaHarness: A Dynamic Physical Harness for Self-Evolving Robot Agents,seed:cit_harness ref_arrl,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2610.02717,RoboBridge: A Self-Evolving Embodied Agent Framework for Sim-to-Real Transfer,seed:cit_harness,maybe,needs the abstract / full text
+2610.06999,ProactiveVLA: Augmenting Embodied Memory through Proactive Environment Exploration,seed:cit_harness,maybe,needs the abstract / full text
+2610.08995,"PhysEvo: Astra Can Act, Let It",seed:cit_harness,maybe,needs the abstract / full text
+2610.09228,Co-Evolving Robot Orchestrators and Policies through Deployment,seed:cit_harness,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2610.10270,"Video Prediction Policy 2: Predict Better, Act Better",seed:cit_harness,exclude,"end-to-end VLA / policy model, no LLM planner loop"
+2610.10498,EmbodiedRSI: Active Continual Robot Learning Through Hypothesis-Guided Co-Evolution,seed:cit_harness,maybe,needs the abstract / full text
+2610.11418,Experience-Guided Initiation Search for Learned Skills in Skill Composition,seed:cit_harness,maybe,needs the abstract / full text
+2610.11480,RoboAware: Learning to Coordinate Embodied Skills from Counterfactual Outcomes,seed:cit_harness,maybe,needs the abstract / full text
+2610.12185,RESETTLE: Robotic Recovery through Disagreement-Triggered Retrieval and Efficient Corrective Control,seed:cit_harness,maybe,needs the abstract / full text
+2610.12369,Embodied Turing Machines: Stateful Code for Robot Recursive Self-Improvement,seed:cit_harness,maybe,needs the abstract / full text
+2610.14018,RoboHarness: A Simple Harness Outperforms VLA and World Action Models,seed:cit_harness,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2610.14601,StateSkill-Agent: An Effective and Efficient Embodied Agent via State-conditioned Skill,seed:cit_harness,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2610.15814,ReTrace: Cross-Stage Failure Attribution for Self-Improving Robotic Manipulation,seed:cit_harness,maybe,needs the abstract / full text
+2610.17114,D-World: An Explicit World-Language-Action Model with Recursive Self-Improvement under Dual Control,seed:cit_dfrc,maybe,needs the abstract / full text
+2610.18352,"Let the Mind Conceive, Let the Hand Achieve: Following Multimodal Instructions for Long-Horizon Robotic Manipulation",seed:cit_harness,maybe,needs the abstract / full text
+2610.18836,Plan-Bench: Can Existing VLMs Go Well Beyond Perception to Reason and Plan in Embodied Worlds?,seed:cit_harness,maybe,needs the abstract / full text
+2610.18867,EmbodiedEvo: Self-Evolving Coding Agent For Physical Intelligence,seed:cit_harness,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2610.19600,Cracking Mobile Manipulation: From Failure Diagnosis to Agentic Robot System,seed:cit_harness,maybe,needs the abstract / full text
+2610.20474,AdaRSI: On-Demand Recursive Self-Improvement for Embodied Agents,seed:cit_harness,maybe,needs the abstract / full text
+2610.21453,CarryOn: A Dual-Loop Harness for Personalized and Reliable Robot Assistance,seed:cit_harness,maybe,needs the abstract / full text
+2610.23372,Beyond Success Rate: Interventional Evaluation of Memory in Vision-Language-Action Systems,seed:cit_harness,maybe,needs the abstract / full text
+2610.24573,Retrieval-triggered Action Projection Adjustment for Frozen VLA Policies: An Empirical Study and Failure Analysis,seed:cit_harness,maybe,needs the abstract / full text
+2610.27417,KPHarness: Co-Evolving Knowledge and Probing for Long-Horizon Gaming Harnesses,seed:cit_harness,exclude,not robotics
+2610.28259,Large Multimodal Models for Direct Robot Control: GPT-6 as a Beginning,seed:cit_harness,maybe,needs the abstract / full text
+2610.28589,AgenticRoboRL: Bringing Coding-Agent Post-Training to Agentic Robotics,seed:cit_harness,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2610.29560,From VLM Planners to Robotic Agents: Self-Evolving Harnesses for History-Dependent Manipulation,seed:cit_harness,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2610.30043,TARSphere: A Robot-Oriented Full-Stack Framework for Long-Horizon Embodied Agents in Evolving Physical and Social Environments,seed:cit_harness,maybe,needs the abstract / full text
+2610.30097,AtomicRL: Atomic Reinforcement Learning for Long-Horizon Robotic Manipulation,seed:cit_harness,maybe,needs the abstract / full text
+2610.31427,FastHarness: Experience-Driven Review Scheduling for Vision-Language-Action Policies,seed:cit_harness,maybe,needs the abstract / full text
+2610.32348,LogLook: Execution-Grounded Memory for Frontier-Model Robot Planners,seed:cit_harness,include,"LLM/VLM agent or planner in the loop, simulated evaluation likely"
+2610.33582,Replicate What Varies: Resource Sharing for Domain-Randomized Embodied Simulation,seed:cit_harness,exclude,benchmark / simulator / infrastructure
+2610.34370,ThinkLocoManip: A Whole-Body Control Agentic Harness for Legged Loco-Manipulation,seed:cit_harness,maybe,needs the abstract / full text
+2610.34649,RobotAgentBench: Towards Open-world Robot Autonomy,seed:cit_harness,maybe,needs the abstract / full text
+2610.35051,VISTA: Active Exploration for Self-Improvement in Embodied Agents,seed:cit_harness,maybe,needs the abstract / full text
+2610.35252,Labference: Benchmarking the Reasoning-Action Connection in Robotic Laboratories,seed:cit_harness,maybe,needs the abstract / full text
+2610.35817,"Pretraining Knows What, Simulation Teaches How: Compositional Generalization in a Sim-Trained Robot Agent",seed:cit_dfrc,maybe,needs the abstract / full text
+2610.36013,OmniBrain-0: A Unified Agentic Model for Embodied Intelligence,seed:cit_harness,maybe,needs the abstract / full text
+2610.36420,SO-101 Bench: Accessible Spatial Manipulation,seed:cit_harness,maybe,needs the abstract / full text

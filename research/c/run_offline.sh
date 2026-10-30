@@ -5,6 +5,7 @@
 #   research/c/run_offline.sh judge <stage>                 the stronger VLM judge ($STRONG_JUDGE_MODEL) ->
 #                                                           vlm_judge_strong.json
 # LIMIT=10 runs on the first 10 episodes only (a test). Resumable: episodes with an output file are skipped.
+# PROBE_CELLS (default hidden-free, the M-all cells the A-G precondition uses; "" for every cell) limits the probes.
 set -euo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
 source "$HERE/c.env"
@@ -40,7 +41,7 @@ case $JOB in
         --limit-mm-per-prompt.image 128 --enable-prefix-caching --enable-auto-tool-choice --generation-config auto \
         --tool-call-parser qwen3_coder --reasoning-parser qwen3
       "$CTL_PYTHON" "$HERE/probe_variants.py" --model-url "http://127.0.0.1:$PORT/v1" --model "$W" --planner "$p" \
-        "${LIMIT_ARGS[@]}" "$RUNS_DIR/$STAGE"
+        --cells-like "${PROBE_CELLS-hidden-free}" "${LIMIT_ARGS[@]}" "$RUNS_DIR/$STAGE"
       stop
     done ;;
   judge)

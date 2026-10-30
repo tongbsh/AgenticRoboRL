@@ -104,9 +104,11 @@ def run(ep: Path, url: str, model: str, timeout_s: float = 600.0, retries: int =
     return out
 
 
-def episodes(roots: list[Path], planner: str):
+def episodes(roots: list[Path], planner: str, cells_like: str = ""):
     for root in roots:
         for cell in sorted({p.parent for p in Path(root).rglob("cell.json")}):
+            if cells_like not in cell.name:
+                continue
             try:
                 meta = json.loads((cell / "cell.json").read_text())
             except (OSError, ValueError):
@@ -124,12 +126,14 @@ def main() -> int:
     ap.add_argument("--model-url", required=True)
     ap.add_argument("--model", required=True)
     ap.add_argument("--planner", required=True, help="only the cells this planner ran (cell.json)")
+    ap.add_argument("--cells-like", default="", help="only cells whose directory name contains this (e.g. hidden-free)")
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--timeout-s", type=float, default=600.0)
     ap.add_argument("--limit", type=int, default=0, help="probe at most this many episodes (a test run)")
     ap.add_argument("--force", action="store_true")
     a = ap.parse_args()
-    todo = [ep for ep in episodes(a.roots, a.planner) if a.force or not (ep / "probe_variants.json").is_file()]
+    todo = [ep for ep in episodes(a.roots, a.planner, a.cells_like)
+            if a.force or not (ep / "probe_variants.json").is_file()]
     if a.limit:
         todo = todo[: a.limit]
     print(f"{len(todo)} {a.planner} episodes to probe", flush=True)

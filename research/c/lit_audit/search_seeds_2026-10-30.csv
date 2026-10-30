@@ -1,0 +1,134 @@
+paper_id,title,year,via
+2502.09560,EmbodiedBench: Comprehensive Benchmarking Multi-modal Large Language Models for Vision-Driven Embodied Agents,2025,ref_dfrc
+2502.19645,Fine-Tuning Vision-Language-Action Models: Optimizing Speed and Success,2025,ref_arrl
+2503.09516,Search-R1: Training LLMs to Reason and Leverage Search Engines with Reinforcement Learning,2025,ref_arrl ref_harness
+2503.14734,GR00T N1: An Open Foundation Model for Generalist Humanoid Robots,2025,ref_dfrc ref_harness
+2504.07164,R2E-Gym: Procedural Environments and Hybrid Verifiers for Scaling Open-Weights SWE Agents,2025,ref_arrl
+2504.13059,RoboTwin: Dual-Arm Robot Benchmark with Generative Digital Twins,2025,ref_harness
+2504.16054,π0.5: a Vision-Language-Action Model with Open-World Generalization,2025,ref_arrl ref_dfrc ref_harness
+2504.19854,NORA: A Small Open-Sourced Generalist Vision Language Action Model for Embodied Tasks,2025,ref_arrl ref_harness
+2504.21798,SWE-smith: Scaling Data for Software Engineering Agents,2025,ref_arrl
+2505.06111,UniVLA: Learning to Act Anywhere with Task-centric Latent Actions,2025,ref_arrl
+2505.22050,Reinforced Reasoning for Embodied Planning,2025,ref_arrl
+2506.20670,MMSearch-R1: Incentivizing LMMs to Search,2025,ref_harness
+2506.21539,WorldVLA: Towards Autoregressive Action World Model,2025,ref_arrl
+2507.02592,WebSailor: Navigating Super-human Reasoning for Web Agent,2025,ref_harness
+2508.03680,Agent Lightning: Train ANY AI Agents with Reinforcement Learning,2025,ref_arrl
+2508.05748,WebWatcher: Breaking New Frontier of Vision-Language Deep Research Agent,2025,ref_harness
+2508.07917,MolmoAct: Action Reasoning Models that can Reason in Space,2025,ref_arrl ref_harness
+2508.14040,ComputerRL: Scaling End-to-End Online Reinforcement Learning for Computer Use Agents,2025,ref_arrl
+2509.02544,UI-TARS-2 Technical Report: Advancing GUI Agent with Multi-Turn Reinforcement Learning,2025,ref_arrl
+2509.15965,RLinf: Flexible and Efficient Large-scale Reinforcement Learning via Macro-to-Micro Flow Transformation,2025,ref_arrl ref_harness
+2509.20021,Embodied AI: From LLMs to World Models [Feature],2025,ref_dfrc
+2509.20328,Video models are zero-shot learners and reasoners,2025,ref_dfrc
+2509.24160,Memory Transfer Planning: LLM-driven Context-Aware Code Adaptation for Robot Manipulation,2025,ref_arrl
+2509.25747,Best of Sim and Real: Decoupled Visuomotor Manipulation via Learning Control in Simulation and Perception in Real,2025,ref_dfrc
+2510.03342,"Gemini Robotics 1.5: Pushing the Frontier of Generalist Robots with Advanced Embodied Reasoning, Thinking, and Motion Transfer",2025,ref_harness
+2510.03827,LIBERO-PRO: Towards Robust and Fair Evaluation of Vision-Language-Action Models Beyond Memorization,2025,ref_arrl
+2510.10274,X-VLA: Soft-Prompted Transformer as Scalable Cross-Embodiment Vision-Language-Action Model,2025,ref_arrl ref_harness
+2510.12693,ERA: Transforming VLMs into Embodied Agents via Embodied Prior Learning and Online Reinforcement Learning,2025,ref_arrl
+2510.13626,LIBERO-Plus: In-depth Robustness Analysis of Vision-Language-Action Models,2025,ref_dfrc
+2510.14828,RoboGPT-R1: Enhancing Robot Task Planning with Reinforcement Learning,2025,ref_arrl
+2511.00917,Maestro: Orchestrating Robotics Modules with Vision-Language Models for Zero-Shot Generalist Robots,2025,ref_harness
+2511.14759,π*0.6: a VLA That Learns From Experience,2025,ref_dfrc
+2511.16108,SkyRL-Agent: Efficient RL Training for Multi-turn LLM Agent,2025,ref_arrl
+2511.21631,Qwen3-VL Technical Report,2025,ref_harness
+2512.10675,Evaluating Gemini Robotics Policies in a Veo World Simulator,2025,ref_dfrc
+2601.18692,A Pragmatic VLA Foundation Model,2026,ref_harness
+2601.22060,Vision-DeepResearch: Incentivizing DeepResearch Capability in Multimodal Large Language Models,2026,ref_harness
+2603.04356,RoboCasa365: A Large-Scale Simulation Framework for Training and Benchmarking Generalist Robots,2026,ref_harness
+2603.04466,Act-Observe-Rewrite: Multimodal Coding Agents as In-Context Policy Learners for Robot Manipulation,2026,ref_arrl
+2603.08519,AtomVLA: Scalable Post-Training for Robotic Manipulation via Predictive Latent World Models,2026,ref_arrl ref_harness
+2603.11558,RoboClaw: An Agentic Framework for Scalable Long-Horizon Robotic Tasks,2026,ref_harness
+2603.16860,DreamPlan: Efficient Reinforcement Fine-Tuning of Vision-Language Planners via Video World Models,2026,ref_arrl
+2603.22435,CaP-X: A Framework for Benchmarking and Improving Coding Agents for Robot Manipulation,2026,ref_arrl ref_harness
+2604.13942,Goal2Skill: Long-Horizon Manipulation with Adaptive Planning and Reflection,2026,cit_harness
+2605.03269,RLDX-1 Technical Report,2026,ref_harness
+2605.05185,OpenSearch-VL: An Open Recipe for Frontier Multimodal Search Agents,2026,ref_arrl
+2605.18747,Code as Agent Harness,2026,ref_harness
+2605.19410,Vision Harnessing Agent for Open Ad-hoc Segmentation,2026,cit_harness
+2605.24220,Polar: Agentic RL on Any Harness at Scale,2026,ref_arrl
+2606.19419,Playful Agentic Robot Learning,2026,ref_harness
+2606.30613,Sequential Planning via Anchored Robotic Keypoints,2026,cit_harness
+2607.00272,ASPIRE: Agentic /Skills Discovery for Robotics,2026,ref_harness
+2607.13653,"Exploratory, Communicative, and Deployable: Vision-Driven Embodied Agents for Open-World Mobile Manipulation",2026,ref_arrl
+2607.18060,RoboHarness: Memory-Driven Orchestration of Heterogeneous Robot Policies for Long-Horizon Planning,2026,cit_harness
+2607.27703,"SpatialCLI: Learning to Reason With Spatial Tools, Then Without Them",2026,cit_harness
+2608.00303,CrystalMem: Elastic Memory for Self-Evolving LLM Agents via Knowledge Crystallization,2026,cit_harness
+2608.09410,"Skills in Weights, Memory in Code: Hybrid Learning for Memory-Dependent Robot Manipulation",2026,cit_dfrc cit_harness
+2608.09516,HarnessWAM: Bridging Prediction and Deliberation in World Action Models,2026,cit_harness
+2608.14944,SkillComposer: Learning Reusable Skills for Natural-Language Robot Programming,2026,ref_arrl
+2608.16590,Zetta $\zeta$: An Efficient Closed-Loop Embodied Harness for Self-Evolving Physical Intelligence,2026,cit_harness
+2608.16889,Don't Drop the BATON: Long-Horizon Robot Manipulation via Agentic Subtask Exploration and Transition-aware Memory,2026,cit_harness ref_arrl
+2608.17393,LEGO-RL: Harness-Native Reinforcement Learning for Coding Agents,2026,ref_arrl
+2608.17528,Agent Lightning v1.0: Towards Harnessed Agentic RL,2026,ref_arrl
+2608.22971,ParallelWorld: Test-Time Scaling for Agentic Embodied Reasoning,2026,cit_harness
+2608.23224,Think Only When Needed: Prompt-Authority Control for Selective Slow-Path Intervention in Vision-Language-Action Manipulation,2026,cit_harness
+2608.25593,JIT-Agent: Scaling Harness Intelligence via Just-in-Time Harness Evolution,2026,cit_harness
+2608.29896,EMERGE-Policy: A Robot Mind Emerges Beyond a Single Policy,2026,cit_harness
+2609.10522,Show-Harness: Just a VLM Agent Can Play Robots,2026,cit_harness
+2609.11308,2AM: Grounding Agent-Side Memory as Guidance for Steerable Action Models in Long-Horizon Manipulation,2026,cit_harness
+2609.12541,Agent as Policy for Robotic Manipulation,2026,cit_harness ref_arrl
+2609.14219,Task-Specified Active Metrological Inspection with Measurement-Steered VLA Manipulation and Deterministic Evidence Gating,2026,cit_harness
+2609.15195,HarnessVLN: Unifying Training-Free Embodied Navigation through an Agent Harness,2026,cit_harness
+2609.16057,OmniHarness: Harnessing Generalizable Visual Generation via Symbolic Policy Learning,2026,cit_harness
+2609.16074,World-Action Models for Robot Learning and Control: A Survey,2026,cit_harness
+2609.19413,From Rollout to Reset: A Graph-Based Harness for Autonomous Long-Horizon Manipulation Evaluation,2026,cit_harness
+2609.19974,MaskHarness-WAM: Instance-Grounded Harnessing for Long-Horizon Robot Manipulation,2026,cit_harness
+2609.20791,StageGuard: Learning Stage Transitions for Long-Horizon Robot Tasks via Agentic Distillation,2026,cit_harness
+2609.20822,Coding Agents with Harness for Safe Robot Control,2026,cit_harness
+2609.22274,CHOREO: Every Humanoid Skill as a Trajectory,2026,cit_harness
+2609.23580,TaskAnchor: Grounding Task State in Reactive VLAs for Long-Horizon Manipulation,2026,cit_harness
+2609.24170,An Unexpected Robot Policy: Early Evaluations of GPT-6 Astra on RoboDojo and Beyond,2026,cit_dfrc
+2609.28530,Know Your Body: A Harness for Direct and Self-Improving Robot Control with VLMs,2026,cit_harness
+2609.29166,HarnessPAI: An Evolving Harness for Physical AI,2026,cit_harness
+2609.29394,"RACaP: Agentic Reasoning, Acting, and Coding as Policies for Evolvable Robot Learning",2026,cit_harness
+2609.30233,Coding Agents for Generalized Task and Motion Planning Problems,2026,cit_dfrc
+2609.31112,DualManip: Agentic Dynamic Manipulation via Dual-Path Semantic Reasoning and Geometric Adaptation,2026,cit_harness
+2609.32862,RoboFoundry: System-as-Policy Evolution for Self-Learning Embodied Agents,2026,cit_harness
+2609.35432,Self-Evolving Coding Agents: From Digital Programs to Physical-World Intelligence,2026,cit_harness
+2609.36808,"Spotter: Let the Embodied Model Lead, and the VLM Reflect for It",2026,cit_harness
+2609.37583,RoboHarn-Evo: Evolving Hierarchical Physical Knowledge for Self-Improving Robotic Manipulation,2026,cit_harness
+2609.37810,"Explore, Execute, Evolve: A Skill Acquisition and Reuse Loop for Embodied Agents",2026,cit_harness
+2609.38616,"Correcting WHERE, Preserving HOW: Compositional Generalization for Vision-Language-Action Models via Referential Guidance",2026,cit_harness
+2609.38982,SimEX: Simulation-Integrated Robotics AutoResearch,2026,cit_harness
+2609.39304,Scale and Selection: What Makes Automatic Harness Evolution Work for Visual-Interface Robot Agents,2026,cit_harness
+2609.40306,DynaHarness: A Dynamic Physical Harness for Self-Evolving Robot Agents,2026,cit_harness ref_arrl
+2610.02717,RoboBridge: A Self-Evolving Embodied Agent Framework for Sim-to-Real Transfer,2026,cit_harness
+2610.06999,ProactiveVLA: Augmenting Embodied Memory through Proactive Environment Exploration,2026,cit_harness
+2610.08995,"PhysEvo: Astra Can Act, Let It",2026,cit_harness
+2610.09228,Co-Evolving Robot Orchestrators and Policies through Deployment,2026,cit_harness
+2610.10270,"Video Prediction Policy 2: Predict Better, Act Better",2026,cit_harness
+2610.10498,EmbodiedRSI: Active Continual Robot Learning Through Hypothesis-Guided Co-Evolution,2026,cit_harness
+2610.11418,Experience-Guided Initiation Search for Learned Skills in Skill Composition,2026,cit_harness
+2610.11480,RoboAware: Learning to Coordinate Embodied Skills from Counterfactual Outcomes,2026,cit_harness
+2610.12185,RESETTLE: Robotic Recovery through Disagreement-Triggered Retrieval and Efficient Corrective Control,2026,cit_harness
+2610.12369,Embodied Turing Machines: Stateful Code for Robot Recursive Self-Improvement,2026,cit_harness
+2610.14018,RoboHarness: A Simple Harness Outperforms VLA and World Action Models,2026,cit_harness
+2610.14601,StateSkill-Agent: An Effective and Efficient Embodied Agent via State-conditioned Skill,2026,cit_harness
+2610.15814,ReTrace: Cross-Stage Failure Attribution for Self-Improving Robotic Manipulation,2026,cit_harness
+2610.17114,D-World: An Explicit World-Language-Action Model with Recursive Self-Improvement under Dual Control,2026,cit_dfrc
+2610.18352,"Let the Mind Conceive, Let the Hand Achieve: Following Multimodal Instructions for Long-Horizon Robotic Manipulation",2026,cit_harness
+2610.18836,Plan-Bench: Can Existing VLMs Go Well Beyond Perception to Reason and Plan in Embodied Worlds?,2026,cit_harness
+2610.18867,EmbodiedEvo: Self-Evolving Coding Agent For Physical Intelligence,2026,cit_harness
+2610.19600,Cracking Mobile Manipulation: From Failure Diagnosis to Agentic Robot System,2026,cit_harness
+2610.20474,AdaRSI: On-Demand Recursive Self-Improvement for Embodied Agents,2026,cit_harness
+2610.21453,CarryOn: A Dual-Loop Harness for Personalized and Reliable Robot Assistance,2026,cit_harness
+2610.23372,Beyond Success Rate: Interventional Evaluation of Memory in Vision-Language-Action Systems,2026,cit_harness
+2610.24573,Retrieval-triggered Action Projection Adjustment for Frozen VLA Policies: An Empirical Study and Failure Analysis,2026,cit_harness
+2610.27417,KPHarness: Co-Evolving Knowledge and Probing for Long-Horizon Gaming Harnesses,2026,cit_harness
+2610.28259,Large Multimodal Models for Direct Robot Control: GPT-6 as a Beginning,2026,cit_harness
+2610.28589,AgenticRoboRL: Bringing Coding-Agent Post-Training to Agentic Robotics,2026,cit_harness
+2610.29560,From VLM Planners to Robotic Agents: Self-Evolving Harnesses for History-Dependent Manipulation,2026,cit_harness
+2610.30043,TARSphere: A Robot-Oriented Full-Stack Framework for Long-Horizon Embodied Agents in Evolving Physical and Social Environments,2026,cit_harness
+2610.30097,AtomicRL: Atomic Reinforcement Learning for Long-Horizon Robotic Manipulation,2026,cit_harness
+2610.31427,FastHarness: Experience-Driven Review Scheduling for Vision-Language-Action Policies,2026,cit_harness
+2610.32348,LogLook: Execution-Grounded Memory for Frontier-Model Robot Planners,2026,cit_harness
+2610.33582,Replicate What Varies: Resource Sharing for Domain-Randomized Embodied Simulation,2026,cit_harness
+2610.34370,ThinkLocoManip: A Whole-Body Control Agentic Harness for Legged Loco-Manipulation,2026,cit_harness
+2610.34649,RobotAgentBench: Towards Open-world Robot Autonomy,2026,cit_harness
+2610.35051,VISTA: Active Exploration for Self-Improvement in Embodied Agents,2026,cit_harness
+2610.35252,Labference: Benchmarking the Reasoning-Action Connection in Robotic Laboratories,2026,cit_harness
+2610.35817,"Pretraining Knows What, Simulation Teaches How: Compositional Generalization in a Sim-Trained Robot Agent",2026,cit_dfrc
+2610.36013,OmniBrain-0: A Unified Agentic Model for Embodied Intelligence,2026,cit_harness
+2610.36420,SO-101 Bench: Accessible Spatial Manipulation,2026,cit_harness

@@ -251,6 +251,7 @@ def test_probe_variants_ask_before_and_after_the_finish_call(tmp_path):
                       status="success", info="hidden", dyn="free")
         (cell / "cell.json").write_text(json.dumps({"planner": planner, "info": "hidden", "dynamics": "free"}))
     (ep,) = PV.episodes([tmp_path / "c0"], "sft")      # only the cells the served planner ran
+    assert list(PV.episodes([tmp_path / "c0"], "sft", "visible-coupled")) == []
     assert "sft__" in str(ep)
     record = {"request": {"tools": [{"type": "function", "function": {"name": "finish"}}]},
               "messages": [{"role": "system", "content": "sys"}, {"role": "tool", "tool_call_id": "m1", "content": "{}"}],

@@ -19,7 +19,7 @@
 
 - arXiv 检索式（cs.RO 或 cs.AI，日期范围同上）：
   - `(LLM OR VLM OR "language model") AND (agent OR planner OR harness) AND (LIBERO OR RoboCasa OR ManiSkill OR MetaWorld OR RoboTwin OR CALVIN OR SimplerEnv)`
-  - 检索执行日期：____
+  - 检索执行日期：2026-10-30（执行细节见 `search_log.md`）
 - 种子论文的引用与被引：Harness VLA (2607.08448)、AgenticRoboRL (2610.28589)、CaP-X、2601.20334。
 - 记录：检索命中数 → 标题/摘要筛选后数 → 全文纳入数（PRISMA 式流程）。
 
@@ -49,3 +49,7 @@
 ## 7. 偏离记录
 
 （日期 — 内容 — 原因）
+
+- 2026-10-30 — arXiv 检索通过 API 的 `all:` 字段执行（标题、摘要、作者、注释，不含全文）— 预注册未指定字段，这是 API 的默认全字段检索；作者名造成的误命中在筛选中排除。
+- 2026-10-30 — 种子论文的引用与被引用 Semantic Scholar 获取，只保留 2025 年及以后、有 arXiv 编号的论文；CaP-X 因 API 限流暂未获取，之后补上 — 预注册未指定数据源。
+- 2026-10-30 — 编码者 1 为 LLM（Claude），编码者 2 为人工；筛选只由编码者 1 完成 — 人力限制；论文中如实报告，κ 衡量的就是 LLM 与人工编码的一致性。
