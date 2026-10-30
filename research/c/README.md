@@ -16,6 +16,8 @@
 | `smoke.sh` | 第 2 周的泄漏自检：SFT × 4 个任务 × 4 个单元，共 16 个回合，然后跑 `leak_check` |
 | `run_cell.sh` | 一个单元（阶段 × planner × 条件），分到 `$GPUS` 上并行，支持断点续跑 |
 | `run_stage.sh` | 一个阶段的所有单元，跑完后依次运行 VLM 判官、泄漏检查和分析 |
+| `run_offline.sh` | 已完成回合上的离线任务：探针换问法（`probe_variants.py`）、更强的 VLM 判官（第 6.1 节） |
+| `probe_variants.py` | 自评探针的三种问法：finish 之前问 Yes/No、finish 之前问概率、finish 之后问 Yes/No |
 | `run_judge.sh` / `vlm_judge.py` | 外部 VLM 判官：读 `finish` 时的第三人称图和腕部图，输出 f_vlm |
 | `self_probe.py` | A0 自评探针：回合结束后用 planner 的完整上下文问"成功概率是多少"，得到 p_probe |
 | `leak_check.py` | 补丁是否生效、录制条数是否完整，以及 (a) 文本、(b) 字段、(c) 解耦、(d) 耦合四项自检 |
@@ -145,8 +147,8 @@ research/c/run_stage.sh c0      # {sft, rl} × {V, M-all} × 80 任务 × 验证
 research/c/run_stage.sh c0_ext   # 仅中间档：验证 init 47–49，960 回合
 research/c/run_stage.sh c1a      # C1 前半：{sft, rl} × {V, M-all}，评测 init 1–5，1600 回合 → analysis/c1a/
 research/c/smoke.sh              # C2 之前：确认 smoke 的 4 个单元都已跑完并通过（续跑，已完成的单元会跳过）
-research/c/run_stage.sh c2       # 2×2 的另外两格：M-info、M-dyn，评测 init 1–5，1600 回合 → analysis/c1a+c2/
-                                 #   C2_SPLIT=1 时加入 M-field、M-prompt
+research/c/run_stage.sh c2       # M-info，评测 init 1–5，800 回合 → analysis/c1a+c2/
+                                 #   C2_DYN=1 时加入 M-dyn（+800，有余力再跑，续跑不重做 M-info）；C2_SPLIT=1 时加入 M-field、M-prompt
 research/c/run_stage.sh c1b      # C1 后半：评测 init 6–10，1600 回合 → analysis/c1a+c1b/（C1 的正式结果）
 ```
 
@@ -159,6 +161,18 @@ C1 拆成两半只改变执行顺序，不改分析：C2 的 2×2 分解只用�
 C1 的 V 条件就是论文的评测协议（800 回合 × 2 个 planner）。它的 `Y_sticky` 应接近论文的 65.1 / 71.0；偏差明显时，先排查环境，再看其他结果。
 
 planner 的墙钟上限与论文相同（`--planner-timeout-s 7200`），我们的卡比论文慢，所以超时更多，尤其是 RL planner。`report.md` 的 timeouts 一列是每个单元的超时比例：同一对比的两个单元应该接近。服务器和别人共用时，超时会随别人的负载变化，请在 `SERVER_LOG.md` 里记录运行期间各卡上有没有别人的进程。
+
+### 6.1 离线任务（不跑新回合，需要一张空闲的卡）
+
+```bash
+LIMIT=10 research/c/run_offline.sh probe c0   # 先在 10 个回合上试跑
+research/c/run_offline.sh probe c0            # 探针三种问法，SFT 和 RL 各用自己的权重，依次起 vLLM
+research/c/run_offline.sh judge c0            # 更强的 VLM 判官（$STRONG_JUDGE_MODEL），写 vlm_judge_strong.json
+```
+
+用 `c.env` 里的 `OFFLINE_GPU` / `OFFLINE_PORT`，这张卡上不能同时有阶段在跑。跑完后重跑该阶段的 `analyze.py`，`report.md` 的 A0 部分会多出 "Offline signals" 一节，标题里是 A-G 前置条件的判定（`AG_GO` / `AG_NO_GO`，规则见计划 2.6 节）。
+
+更强的判官：72GB 单卡放得下的，优先 `Qwen3-VL-32B-Instruct-FP8`，其次 `Qwen3-VL-30B-A3B-Instruct-FP8`。实际下载哪个、vLLM 能否启动，以服务器上的结果为准，并在报告里写明。
 
 ## 7. 运行管理
 

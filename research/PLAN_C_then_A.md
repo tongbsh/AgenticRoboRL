@@ -123,6 +123,7 @@ GPU 时间按单回合 20 分钟、16 路并发（每小时 48 回合）估算�
 **C0 实测后的修订（2026-10-30，C1 开始之前写定）**：
 - **速度**：C0 实际用了 2 张卡 63.5 小时，约每卡每小时 5 回合；上表按 4 张卡估算，约每卡每小时 12 回合，实测慢约 2.4 倍。按实测，C1 约 26 个卡日，C2 约 13 个卡日：2 张卡分别约 13 天和 7 天，4 张卡减半。
 - **执行顺序**：C1 拆成 c1a（评测 init 1–5）和 c1b（init 6–10），按 c1a → C2 → c1b 执行，这样 C2 的分解可以和 c1a 配对、提前拿到。分析不变：C1 的结论只在 c1a+c1b 合并后报告，c1b 不论中期结果如何都要跑。
+- **C2 先只跑 M-info**（2026-10-30 补充，C2 开始之前写定）：C2 默认只跑 {SFT, RL} × M-info（800 回合）；M-dyn 改为有余力时再跑（`C2_DYN=1`，续跑不重做 M-info）。主分解走 V → M-info → M-all 这条路径：信息通道 = V − M-info，动力学通道 = M-info − M-all；涉及 M-dyn 的另一条路径和交互项降为次要分析。
 - **检查 (d)**：coupled 下 env 在成功所在的 5 步动作块结束后才停（原版 RPent 的行为），块内撤销成功记为警告，不算失败；C0 的 V 条件有 5 个这样的回合（RL 3 个、SFT 2 个）。主估计不变：块内撤销在 M-all 下同样会发生，两个条件的 `Y_final` 口径一致。
 
 ### 1.7 文献审计（第 1–2 周写定，之后才开始读论文）
@@ -241,6 +242,13 @@ CoRL 2027、NeurIPS 2027 Datasets & Benchmarks，或 RSS 2027 的实验型论文
 
   三条都满足才进入 A-E2 全量；只满足部分时进入 A-lite；都不满足则停。
 - **性质**：单种子、短预算，只用于 go/no-go，不作为论文证据。
+- **前置条件（2026-10-30 写定，在任何离线探针结果出来之前）**：A0 里 p_probe 的 AUROC 与 finish 时报的 status（f_status）几乎相同，自评没有提供 status 以外的信息。所以先在已有回合上离线换问法（`research/c/probe_variants.py`）：
+  - `p_pre_yesno`：截到 planner 最后一次决策之前（调用 finish 之前），问目标是否成立，取 Yes/No 首 token 的概率；
+  - `p_pre_verbal`：同样截断，让它说出概率；
+  - `p_post_yesno`：A0 的位置（finish 之后），取 Yes/No 首 token 的概率。
+
+  在 M-all 回合上，只要某个 planner 有一种问法的 AUROC 比 f_status 高 ≥ 0.05，且 task 聚类 bootstrap 的 95% CI 下界 > 0，就用该 planner 跑 A-G（`AG_GO`）；否则不跑在线 gate，A 转为 A-lite 或并入 C（`AG_NO_GO`）。判定由 `analyze.py` 自动给出。
+- **更强的外部判官**（服务 C，不参与 A-G 判定）：用比 Qwen3-VL-8B 更大的 VLM 重判同样的最后一帧（`f_vlm_strong`），回答"现成的检测器能否替代 oracle"。
 
 ---
 

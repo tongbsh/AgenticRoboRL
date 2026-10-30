@@ -11,7 +11,9 @@ logprobs the answer text decides (1.0 / 0.0).
 
 Run it after the episodes, against a vLLM server of the judge model (research/c/run_judge.sh starts one):
   python research/c/vlm_judge.py --model-url http://127.0.0.1:18500/v1 --model Qwen/Qwen3-VL-8B-Instruct runs/c/c0
-Writes <episode dir>/vlm_judge.json; episodes that already have one are skipped (--force to redo).
+Writes <episode dir>/vlm_judge.json; episodes that already have one are skipped (--force to redo). A second, stronger
+judge writes beside it with --out-name vlm_judge_strong.json (research/c/run_offline.sh judge); analyze.py reads that
+one as f_vlm_strong.
 """
 from __future__ import annotations
 
@@ -163,16 +165,20 @@ def main() -> int:
     ap.add_argument("--model", required=True)
     ap.add_argument("--workers", type=int, default=16)
     ap.add_argument("--timeout-s", type=float, default=300.0)
+    ap.add_argument("--out-name", default="vlm_judge.json", help="per-episode output file")
+    ap.add_argument("--limit", type=int, default=0, help="judge at most this many episodes (a test run)")
     ap.add_argument("--force", action="store_true")
     a = ap.parse_args()
-    todo = [(ep, tr) for ep, tr in episode_dirs(a.roots) if a.force or not (ep / "vlm_judge.json").is_file()]
+    todo = [(ep, tr) for ep, tr in episode_dirs(a.roots) if a.force or not (ep / a.out_name).is_file()]
+    if a.limit:
+        todo = todo[: a.limit]
     print(f"{len(todo)} episodes to judge", flush=True)
     n_err = 0
     with concurrent.futures.ThreadPoolExecutor(max_workers=a.workers) as pool:
         futs = {pool.submit(judge, ep, tr, a.model_url, a.model, a.timeout_s): ep for ep, tr in todo}
         for i, f in enumerate(concurrent.futures.as_completed(futs), 1):
             ep, res = futs[f], f.result()
-            (ep / "vlm_judge.json").write_text(json.dumps(res, indent=1))
+            (ep / a.out_name).write_text(json.dumps(res, indent=1))
             n_err += res["error"] is not None
             if i % 50 == 0 or i == len(todo):
                 print(f"{i}/{len(todo)} judged, {n_err} errors", flush=True)

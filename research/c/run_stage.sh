@@ -7,9 +7,11 @@
 #   research/c/run_stage.sh c1a      C1 in halves:  the same cells on eval inits 1-5, then           (1600 episodes)
 #   research/c/run_stage.sh c1b                     on eval inits 6-10; c1a + c1b = c1, analysed     (1600 episodes)
 #                                                   together after c1b (run either c1 or c1a + c1b)
-#   research/c/run_stage.sh c2       C2 2x2:        {sft, rl} x {M-info, M-dyn} on eval inits 1-5    (1600 episodes)
-#                                                   (+ M-field / M-prompt with C2_SPLIT=1); analysed with
-#                                                   whichever of c1 / c1a / c1b exist (pairs need eval inits 1-5)
+#   research/c/run_stage.sh c2       C2 2x2:        {sft, rl} x M-info on eval inits 1-5             (800 episodes)
+#                                                   (+ M-dyn with C2_DYN=1, +800; M-field / M-prompt with
+#                                                   C2_SPLIT=1); analysed with whichever of c1 / c1a / c1b exist
+#                                                   (pairs need eval inits 1-5). Rerun with C2_DYN=1 later to add
+#                                                   M-dyn: the M-info cells are kept.
 # Each cell is resumable (run the stage again); a finished cell is skipped quickly.
 set -euo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
@@ -19,7 +21,8 @@ case $STAGE in
   c0|c0_ext) CELLS=("sft visible coupled" "sft hidden free" "rl visible coupled" "rl hidden free") ;;
   c1|c1a|c1b) CELLS=("sft visible coupled" "sft hidden free" "rl visible coupled" "rl hidden free")
       if [ "${INCLUDE_BASE:-0}" = 1 ]; then CELLS+=("base visible coupled" "base hidden free"); fi ;;
-  c2) CELLS=("sft hidden coupled" "sft visible free" "rl hidden coupled" "rl visible free")
+  c2) CELLS=("sft hidden coupled" "rl hidden coupled")
+      if [ "${C2_DYN:-0}" = 1 ]; then CELLS+=("sft visible free" "rl visible free"); fi
       if [ "${C2_SPLIT:-0}" = 1 ]; then CELLS+=("sft fields coupled" "sft prompt coupled" "rl fields coupled" "rl prompt coupled"); fi ;;
   *) echo "bad stage $STAGE"; exit 2 ;;
 esac

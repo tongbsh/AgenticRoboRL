@@ -56,3 +56,15 @@ def test_pp_resample_informative_vs_useless_predictor():
     assert u["var_ratio"] > 0.8 and u["noise_ratio"] > 0.95     # an unrelated one saves nothing, whatever its mean
     assert abs(g["mean_pp"] - r.mean()) < 0.02                    # unbiased on average
     assert g["noise_ratio"] == pytest.approx(1 - g["corr"] ** 2)
+
+
+def test_auroc_diff():
+    rng = np.random.default_rng(0)
+    y = (rng.random(300) < 0.5).astype(int)
+    good = y + rng.normal(0, 0.3, 300)
+    bad = rng.random(300)
+    cl = [f"t{i // 3}" for i in range(300)]
+    d = S.auroc_diff(cl, good, bad, y, n_boot=300)
+    assert d["mean"] == pytest.approx(d["auroc_a"] - d["auroc_b"]) and d["ci"][0] > 0.2
+    same = S.auroc_diff(cl, good, good, y, n_boot=100)
+    assert same["mean"] == 0 and same["ci"] == [0.0, 0.0]

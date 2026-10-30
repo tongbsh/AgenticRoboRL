@@ -14,6 +14,7 @@ import pytest
 
 import analyze as A
 import leak_check as L
+import probe_variants as PV
 import self_probe as SP
 import vlm_judge as VJ
 
@@ -241,6 +242,55 @@ def test_self_probe_rebuilds_the_last_request(tmp_path):
     assert msgs[2]["role"] == "assistant" and "reasoning_content" not in msgs[2]
     assert msgs[3]["role"] == "tool" and json.loads(msgs[3]["content"])["_finish"] is True
     assert msgs[4] == {"role": "user", "content": SP.PROBE}
+
+
+def test_probe_variants_ask_before_and_after_the_finish_call(tmp_path):
+    sft_cell, rl_cell = tmp_path / "c0" / "sft__hidden-free", tmp_path / "c0" / "rl__hidden-free"
+    for cell, planner in ((sft_cell, "sft"), (rl_cell, "rl")):
+        write_episode(cell, "c0", "libero_goal_task", 1, 45, y_sticky=True, y_final=True, finish=True,
+                      status="success", info="hidden", dyn="free")
+        (cell / "cell.json").write_text(json.dumps({"planner": planner, "info": "hidden", "dynamics": "free"}))
+    (ep,) = PV.episodes([tmp_path / "c0"], "sft")      # only the cells the served planner ran
+    assert "sft__" in str(ep)
+    record = {"request": {"tools": [{"type": "function", "function": {"name": "finish"}}]},
+              "messages": [{"role": "system", "content": "sys"}, {"role": "tool", "tool_call_id": "m1", "content": "{}"}],
+              "message": {"role": "assistant", "content": "", "tool_calls": [
+                  {"id": "f1", "type": "function", "function": {"name": "finish", "arguments": "{\"status\": \"success\"}"}}]}}
+    (ep / "rl_turns" / "turn_000.json.gz").write_bytes(gzip.compress(json.dumps(record).encode()))
+    reply = {"choices": [{"message": {"content": "0.4"}, "logprobs": {"content": [{"token": "Yes", "logprob": -0.1,
+             "top_logprobs": [{"token": "Yes", "logprob": float(np.log(0.6))}, {"token": " no", "logprob": float(np.log(0.2))}]}]}}]}
+    srv = _Server(reply)
+    try:
+        out = PV.run(ep, srv.url, "m")
+    finally:
+        srv.close()
+    assert out["error"] is None
+    assert out["p_pre_yesno"] == pytest.approx(0.75) and out["p_post_yesno"] == pytest.approx(0.75)
+    assert out["p_pre_verbal"] == 0.4
+    pre_yesno, pre_verbal, post_yesno = srv.bodies
+    assert [m["role"] for m in pre_yesno["messages"]] == ["system", "tool", "user"]     # before the finish call
+    assert pre_yesno["max_tokens"] == 1 and pre_yesno["logprobs"] and pre_yesno["tool_choice"] == "none"
+    assert pre_verbal["max_tokens"] == 512 and "probability" in pre_verbal["messages"][-1]["content"]
+    roles = [m["role"] for m in post_yesno["messages"]]
+    assert roles == ["system", "tool", "assistant", "tool", "user"]                       # after it, as in A0
+    assert post_yesno["messages"][-1]["content"].startswith(PV.POST)
+
+
+def test_offline_signals_and_the_ag_precondition(tmp_path):
+    make_stage(tmp_path, "c0", drop=0.3, n_tasks=60)
+    rows = A.collect(tmp_path, ["c0"])
+    assert all(r["p_pre_yesno"] is None for r in rows)
+    assert A.exploratory(A.cells(rows), ["rl", "sft"], seed=0) == ({}, {})       # nothing offline yet
+    rng = np.random.default_rng(3)
+    for r in rows:
+        r["p_pre_yesno"] = float(r["Y_final"])          # knows more than its claim (claims include 15% false ones)
+        r["p_post_yesno"] = float(rng.random())         # knows nothing
+    out, ag = A.exploratory(A.cells(rows), ["rl", "sft"], seed=0)
+    assert out["sft:p_pre_yesno"]["vs_status"]["mean"] > A.AG_MARGIN and out["sft:p_post_yesno"]["vs_status"]["mean"] < 0
+    assert ag["decision"] == "AG_GO" and ag["sft"]["passing"] == ["p_pre_yesno"]
+    for r in rows:
+        r["p_pre_yesno"] = r["f_status"]
+    assert A.exploratory(A.cells(rows), ["rl", "sft"], seed=0)[1]["decision"] == "AG_NO_GO"
 
 
 def test_vlm_judge_reads_final_images_and_logprobs(tmp_path):

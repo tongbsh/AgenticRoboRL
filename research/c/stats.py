@@ -111,6 +111,30 @@ def auroc(p: Sequence[float], y: Sequence[int]) -> float | None:
     return float((rpos - len(pos) * (len(pos) + 1) / 2) / (len(pos) * len(neg)))
 
 
+def auroc_diff(clusters: Sequence, a: Sequence[float], b: Sequence[float], y: Sequence[int], *, n_boot: int = 2000,
+               seed: int = 0, alpha: float = 0.05) -> dict:
+    """AUROC(a) - AUROC(b) on the same episodes, with a task-cluster bootstrap CI (resamples where one class is
+    missing are skipped)."""
+    a, b, y = np.asarray(a, float), np.asarray(b, float), np.asarray(y, int)
+    d0 = auroc(a, y), auroc(b, y)
+    if None in d0:
+        return {"n": len(y), "auroc_a": d0[0], "auroc_b": d0[1], "mean": None, "ci": [None, None]}
+    groups: dict = defaultdict(list)
+    for i, c in enumerate(clusters):
+        groups[c].append(i)
+    idx = [np.array(groups[k]) for k in sorted(groups, key=str)]
+    rng = np.random.default_rng(seed)
+    boot = []
+    for _ in range(n_boot):
+        take = np.concatenate([idx[j] for j in rng.integers(0, len(idx), size=len(idx))])
+        ra, rb = auroc(a[take], y[take]), auroc(b[take], y[take])
+        if ra is not None and rb is not None:
+            boot.append(ra - rb)
+    lo, hi = (np.quantile(boot, [alpha / 2, 1 - alpha / 2]) if boot else (None, None))
+    return {"n": len(y), "n_clusters": len(idx), "auroc_a": d0[0], "auroc_b": d0[1], "mean": d0[0] - d0[1],
+            "ci": [None if lo is None else float(lo), None if hi is None else float(hi)]}
+
+
 def calibration(p: Sequence[float], y: Sequence[int], n_bins: int = 10) -> dict:
     """Brier score, ECE (equal-width bins) and the Murphy decomposition Brier = reliability - resolution + uncertainty
     (binned, so the identity holds up to the within-bin variance of p)."""

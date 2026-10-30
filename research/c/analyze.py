@@ -31,6 +31,12 @@ CI, two-sided cluster sign-flip p, Holm over all planners x endpoints:
   C_WEAK   every endpoint of every planner below its lower bound
   EXPAND   anything else (middle zone, or a threshold met without significance): run c0_ext and decide again on the
            pooled stages
+Exploratory signals (offline, research/c/run_offline.sh; not part of the A0 decision): the probe variants p_pre_yesno,
+p_pre_verbal, p_post_yesno (probe_variants.py) and the stronger judge f_vlm_strong (vlm_judge_strong.json).
+A-G precondition (section 2.6, fixed 2026-10-30 before any variant was run), on the M-all episodes:
+  AG_GO     for some planner, some probe variant beats f_status by AUROC >= 0.05 with the task-cluster bootstrap
+            95% CI above 0: run A-G with that planner
+  AG_NO_GO  otherwise: A becomes A-lite or a section of C; no online gate
 A0 decision (section 2.5), on the M-all episodes, per self-assessment (p_probe, f_vlm, f_status) against Y_final:
   A_GATE         some signal with AUROC in [0.65, 0.97] and ECE > 0.05: run the online gate (section 2.6)
   A_GATE_LOW_ROOM  informative (AUROC in [0.65, 0.97]) but already calibrated (ECE <= 0.05)
@@ -72,6 +78,9 @@ ENDPOINTS = {  # name: (outcome, sign: +1 = M-all minus V, -1 = V minus M-all), 
 }
 SECONDARY = {"sticky_drop": ("Y_sticky", -1), "turns_change": ("turns", +1), "ms_increase": ("MS", +1)}
 SIGNALS = ("p_probe", "f_vlm", "f_status")
+VARIANTS = ("p_pre_yesno", "p_pre_verbal", "p_post_yesno")
+EXPLORATORY = (*VARIANTS, "f_vlm_strong")
+AG_MARGIN = 0.05
 _CELL = re.compile(r"^(?P<planner>[^_]+(?:_[^_]+)*)__(?P<info>[a-z]+)-(?P<dyn>[a-z]+)$")
 
 
@@ -119,6 +128,7 @@ def episode_row(tr_path: Path, stage: str, meta: dict) -> dict | None:
     log = o.get("log") or []
     first = next((i for i, e in enumerate(log) if e.get("success_ever")), None)
     probe, judge = opt_json(ep / "self_probe.json"), opt_json(ep / "vlm_judge.json")
+    variants, strong = opt_json(ep / "probe_variants.json"), opt_json(ep / "vlm_judge_strong.json")
     return {
         "stage": stage, "planner": meta["planner"], "info": meta["info"], "dynamics": meta["dynamics"],
         "condition": CONDITIONS.get((meta["info"], meta["dynamics"]), f"{meta['info']}/{meta['dynamics']}"),
@@ -134,7 +144,8 @@ def episode_row(tr_path: Path, stage: str, meta: dict) -> dict | None:
         "calls_after_success": (len(log) - first - 1) if first is not None else None,
         "first_success_env_step": o.get("first_success_env_step"), "env_steps": o.get("env_steps"),
         "p_probe": probe.get("p_probe"), "f_vlm": judge.get("p_vlm"),
-        "f_status": float(claimed) if finish else 0.0, "episode_dir": str(ep),
+        "f_status": float(claimed) if finish else 0.0,
+        **{k: variants.get(k) for k in VARIANTS}, "f_vlm_strong": strong.get("p_vlm"), "episode_dir": str(ep),
     }
 
 
@@ -297,10 +308,38 @@ def a0(c: dict, planners: list[str], seed: int, qs=(0.05, 0.10, 0.20)) -> dict:
             for q in qs:
                 out["pp"][f"{p}:{sig}:q={q}"] = S.pp_resample([r["Y_final"] for _, r in keep], [v for v, _ in keep],
                                                               [r["task_id"] for _, r in keep], q, seed=seed)
+    out["exploratory"], out["ag_precondition"] = exploratory(c, planners, seed)
     order = ["A_GATE", "A_GATE_LOW_ROOM", "A_TOO_EASY", "A_WEAK_SIGNAL"]
     out["decision"] = min(decisions, key=order.index) if decisions else "NO_DATA"
     out["decision_per_planner"] = dict(zip([p for p in planners if c.get((p, "M-all"))], decisions))
     return out
+
+
+def exploratory(c: dict, planners: list[str], seed: int) -> tuple[dict, dict]:
+    """Offline signals on the M-all episodes: calibration, AUROC minus AUROC(f_status), and the A-G precondition."""
+    out, ag = {}, {}
+    for p in planners:
+        eps = [r for r in c.get((p, "M-all"), {}).values() if r["Y_final"] is not None]
+        go = []
+        for sig in ("p_probe", "f_vlm", *EXPLORATORY):
+            keep = [r for r in eps if r.get(sig) is not None]
+            if not keep or len(keep) < 0.9 * len(eps):
+                continue
+            m = S.calibration([r[sig] for r in keep], [r["Y_final"] for r in keep])
+            m["coverage"] = len(keep) / len(eps)
+            m["vs_status"] = S.auroc_diff([r["task_id"] for r in keep], [r[sig] for r in keep],
+                                          [r["f_status"] for r in keep], [r["Y_final"] for r in keep], seed=seed)
+            out[f"{p}:{sig}"] = m
+            d = m["vs_status"]
+            if sig in VARIANTS and d["mean"] is not None and d["mean"] >= AG_MARGIN and (d["ci"][0] or 0) > 0:
+                go.append(sig)
+        if any(f"{p}:{v}" in out for v in VARIANTS):
+            ag[p] = {"decision": "AG_GO" if go else "AG_NO_GO", "passing": go}
+    if not any(k.split(":", 1)[1] in EXPLORATORY for k in out):
+        return {}, {}  # no offline signal yet
+    if ag:
+        ag["decision"] = "AG_GO" if any(v["decision"] == "AG_GO" for v in ag.values()) else "AG_NO_GO"
+    return out, ag
 
 
 def fmt(x, nd=3):
@@ -358,6 +397,16 @@ def report(summary: dict) -> str:
             for k, m in a["pp"].items():
                 L.append(f"| {k} | {m['n']} | {fmt(m['corr'])} | {fmt(m['var_label_only'], 5)} | {fmt(m['var_pp'], 5)} | "
                          f"{fmt(m['var_ratio'])} | {fmt(m['noise_ratio'])} | {fmt(m['brier_of_f'])} |")
+        if a.get("exploratory"):
+            ag = a.get("ag_precondition") or {}
+            L += ["", f"### Offline signals (exploratory) -- A-G precondition: **{ag.get('decision', '—')}**", "",
+                  "Same M-all episodes; AUROC - AUROC(f_status) with a task-cluster bootstrap 95% CI. "
+                  f"AG_GO needs a probe variant with a difference >= {AG_MARGIN} and the CI above 0.", "",
+                  "| planner:signal | coverage | AUROC | AUROC - f_status [95% CI] | ECE | Brier |", "|" + "---|" * 6]
+            for k, m in a["exploratory"].items():
+                d = m["vs_status"]
+                L.append(f"| {k} | {fmt(m['coverage'], 2)} | {fmt(m.get('auroc'))} | {fmt(d['mean'])} "
+                         f"[{fmt(d['ci'][0])}, {fmt(d['ci'][1])}] | {fmt(m.get('ece'))} | {fmt(m.get('brier'))} |")
     return "\n".join(L) + "\n"
 
 
