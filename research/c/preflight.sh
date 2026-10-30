@@ -51,7 +51,7 @@ repo, here = Path(sys.argv[1]), Path(sys.argv[2])
 sys.path.insert(0, str(repo / "rl"))
 import harness_cfg as HC
 cfg = HC.apply_vars(HC.load(repo / "harnesses/rpent_libero_c/harness.yaml"), {"proxy_port": "1", "model_port": "2"})
-for stage in ("c0", "c0_ext", "c1", "c2", "smoke"):
+for stage in ("c0", "c0_ext", "c1", "c1a", "c1b", "c2", "smoke"):
     t = HC.load_tasks(here / "tasks" / f"{stage}.jsonl")
 v = HC.episode_vars(cfg, t[0], 45, 0, Path("/tmp/x"), "/w", {"gpu": 0, "vla_port": 3, "sam3_port": 4, "oracle_info": "hidden",
                     "oracle_dynamics": "free", "vllm_mem": 0.5, "max_model_len": 1, "max_turns": 1, "round": 0})
